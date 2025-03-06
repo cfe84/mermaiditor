@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Chart Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/comment/comment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/display/placeholder.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        #preview {
+            width: 100%;
+            height: 100%;
+            border-left: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+
+        .smallBtn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+
+        #copy-btn {
+            right: 60px; /* Adjust position for the copy button */
+        }
+
+        #download-btn {
+            right: 10px; /* Adjust position for the download button */
+        }
+    </style>
+    <script type="module" src="src/mermeditor.js"></script>
+</head>
+<body>
+    <div id="container">
+        <div id="editor-container">
+            <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
+        </div>
+        <div id="preview-container">
+            <div id="preview"></div>
+            <button class="smallBtn" id="copy-btn">
+                📋
+            </button>
+
+            <button class="smallBtn" id="download-btn">
+                💾
+            </button>
+        </div>
+    </div>
+    <!-- <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
+    <div id="preview"></div> -->
+</body>
+</html>
