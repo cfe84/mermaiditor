@@ -58,13 +58,43 @@
         #download-btn {
             right: 10px; /* Adjust position for the download button */
         }
+
+        #file-selector {
+            width: calc(100% - 80px); /* Adjust width to fill remaining space */
+            padding: 10px;
+            font-size: 14px;
+            background-color: white;
+            border-color: black;
+            border-width: 1px;
+            box-sizing: border-box;
+            margin: 0;
+            display: inline-block;
+
+        }
+
+        #delete-btn {
+            display: inline-block;
+            background-color: white;
+            border-color: black;
+            border-width: 1px;
+            padding: 10px;
+            font-size: 14px;
+            margin: 0;
+            width: 80px;
+        }
     </style>
     <script type="module" src="src/mermeditor.js"></script>
 </head>
 <body>
     <div id="container">
-        <div id="editor-container">
-            <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
+        <div id="left-bar">
+            <div id="navigator-container">
+                <select id="file-selector">
+                </select><button id="delete-btn">Delete</button>
+            </div>
+            <div id="editor-container">
+                <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
+            </div>
         </div>
         <div id="preview-container">
             <div id="preview"></div>
