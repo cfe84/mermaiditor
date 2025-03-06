@@ -158,6 +158,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function loadFiles() {
         const files = getFiles();
+        if (!selectedFile)
+            selectedFile = files[0]?.name;
         fileSelector.innerHTML = '';
         if (files.length === 0) {
             const option = document.createElement('option');
@@ -221,14 +223,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getFiles() {
-        const files = [];
+        let files = [];
         for(let i = 0; i < localStorage.length; i++) {
             if (localStorage.key(i).startsWith('file-')) {
                 files.push(JSON.parse(localStorage[localStorage.key(i)]));
             }
         }
+        files = files.sort((a, b) => a.name.localeCompare(b.name));
         return files;
     }
+
+    document.getElementById('delete-btn').addEventListener('click', () => {
+        if (selectedFile) {
+            const confirmed = confirm(`Are you sure you want to delete "${selectedFile}"?`);
+            if (confirmed) {
+                localStorage.removeItem(`file-${selectedFile}`);
+                const files = getFiles();
+                if (files.length > 0) {
+                    selectedFile = files[0].name;
+                    openFile(selectedFile);
+                } else {
+                    selectedFile = null;
+                }
+                loadFiles();
+                showNotification('File deleted successfully!');
+            }
+        } else {
+            showNotification('No file selected to delete.');
+        }
+    });
 
     await runAsync();
 });
