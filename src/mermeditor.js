@@ -35,6 +35,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const width = rendered.clientWidth;
             await downloadAsync(height, width, preview.innerHTML, 'diagram.png');
         });
+
+        document.getElementById('delete-btn').addEventListener('click', () => {
+            if (selectedFile) {
+                deleteFile();
+            } else {
+                showNotification('No file selected to delete.');
+            }
+        });
+
+        document.getElementById('rename-btn').addEventListener('click', () => {
+            if (selectedFile) {
+                renameFile();
+            } else {
+                showNotification('No file selected to rename.');
+            }
+        });
     
         loadLastFile();
         loadFiles();
@@ -233,31 +249,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 files.push(JSON.parse(localStorage[localStorage.key(i)]));
             }
         }
-        files = files.sort((a, b) => a.name.localeCompare(b.name));
+        if (files.length > 1) {
+            files = files.sort((a, b) => a.name.localeCompare(b.name));
+        }
         return files;
     }
 
-    document.getElementById('delete-btn').addEventListener('click', () => {
-        if (selectedFile) {
-            const confirmed = confirm(`Are you sure you want to delete "${selectedFile}"?`);
-            if (confirmed) {
-                localStorage.removeItem(`file-${selectedFile}`);
-                const files = getFiles();
-                if (files.length > 0) {
-                    selectedFile = files[0].name;
-                    openFile(selectedFile);
-                } else {
-                    localStorage.removeItem('selectedFile');
-                    selectedFile = null;
-                    editor.setValue(defaultContent);
-                }
-                loadFiles();
-                showNotification('File deleted successfully!');
+    function deleteFile() {
+        const confirmed = confirm(`Are you sure you want to delete "${selectedFile}"?`);
+        if (confirmed) {
+            localStorage.removeItem(`file-${selectedFile}`);
+            const files = getFiles();
+            if (files.length > 0) {
+                selectedFile = files[0].name;
+                openFile(selectedFile);
+            } else {
+                localStorage.removeItem('selectedFile');
+                selectedFile = null;
+                editor.setValue(defaultContent);
             }
-        } else {
-            showNotification('No file selected to delete.');
+            loadFiles();
+            showNotification('Diagram deleted successfully!');
         }
-    });
+    }
+
+    function renameFile() {
+        const newName = prompt(`New diagram name for "${selectedFile}"?`);
+        if (newName) {
+            const file = JSON.parse(localStorage.getItem(`file-${selectedFile}`));
+            file.name = newName;
+            localStorage.setItem(`file-${newName}`, JSON.stringify(file));
+            localStorage.removeItem(`file-${selectedFile}`);
+            selectedFile = newName;
+            localStorage.setItem('selectedFile', selectedFile);
+            loadFiles();
+            showNotification('Diagram renamed successfully!');
+        }
+    }
 
     await runAsync();
 });

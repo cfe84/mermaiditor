@@ -72,7 +72,7 @@
         }
 
         #file-selector {
-            width: calc(100% - 80px); /* Adjust width to fill remaining space */
+            width: calc(100% - 160px); /* Adjust width to fill remaining space */
             padding: 10px;
             font-size: 14px;
             background-color: white;
@@ -84,7 +84,7 @@
 
         }
 
-        #delete-btn {
+        .menu-btn {
             display: inline-block;
             background-color: white;
             border-color: black;
@@ -110,7 +110,7 @@
             </div>
             <div id="navigator-container">
                 <select id="file-selector">
-                </select><button id="delete-btn">Delete</button>
+            </select><button class="menu-btn" id="rename-btn">Rename</button><button class="menu-btn" id="delete-btn">Delete</button>
             </div>
             <div id="editor-container">
                 <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
