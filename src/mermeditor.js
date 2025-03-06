@@ -49,27 +49,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function hookResize() {
         const container = document.getElementById('container');
-        const editorContainer = document.getElementById('left-bar');
+        const leftBar = document.getElementById('left-bar');
+        const splitBar = document.getElementById('split-bar');
         const previewContainer = document.getElementById('preview-container');
         let isResizing = false;
 
         container.style.display = 'flex';
         container.style.height = '100%';
         container.style.width = '100%';
-        editorContainer.style.width = '50%';
+        leftBar.style.width = '50%';
         previewContainer.style.width = '50%';
-        editorContainer.style.resize = 'horizontal';
-        editorContainer.style.overflow = 'auto';
+        leftBar.style.resize = 'horizontal';
+        leftBar.style.overflow = 'auto';
 
-        editorContainer.addEventListener('mousedown', function(e) {
+        splitBar.addEventListener('mousedown', function(e) {
             isResizing = true;
         });
 
         document.addEventListener('mousemove', function(e) {
             if (!isResizing) return;
             const offsetRight = container.clientWidth - (e.clientX - container.offsetLeft);
-            editorContainer.style.width = `${container.clientWidth - offsetRight}px`;
-            previewContainer.style.width = `${offsetRight}px`;
+            leftBar.style.width = `${container.clientWidth - offsetRight - 3}px`;
+            previewContainer.style.width = `${offsetRight - 2}px`;
         });
 
         document.addEventListener('mouseup', function(e) {
@@ -212,6 +213,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function openFile(name) {
         const file = JSON.parse(localStorage.getItem(`file-${name}`));
+        if (!file) {
+            return
+        }
         localStorage.setItem('selectedFile', name);
         selectedFile = file.name;
         editor.setValue(file.content);
@@ -243,7 +247,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     selectedFile = files[0].name;
                     openFile(selectedFile);
                 } else {
+                    localStorage.removeItem('selectedFile');
                     selectedFile = null;
+                    editor.setValue(defaultContent);
                 }
                 loadFiles();
                 showNotification('File deleted successfully!');
