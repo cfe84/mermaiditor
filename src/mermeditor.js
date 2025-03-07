@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renameProject() {
-        const newName = prompt(`New project name for "${selectedProject.name}"?`);
+        const newName = prompt(`New project name for "${selectedProject.name}"?`, selectedProject.name);
         if (newName) {
             selectedProject.name = newName;
             saveProject(selectedProject);
@@ -479,7 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         const file = getFile(getSelectedFileId());
-        const newName = prompt(`New diagram name for "${file.name}"?`);
+        const newName = prompt(`New diagram name for "${file.name}"?`, file.name);
         if (newName) {
             file.name = newName;
             saveFile(file);
