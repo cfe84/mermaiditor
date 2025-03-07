@@ -3,8 +3,11 @@ import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.mi
 document.addEventListener('DOMContentLoaded', async () => {
     const preview = document.getElementById('preview');
     const fileSelector = document.getElementById('file-selector');
+    const consoleElt = document.getElementById('console');
+    const projectSelector = document.getElementById('project-selector');
     let selectedFile = null;
-    const defaultContent = "graph TD;\n    A-->B;\n    A-->C;\n    B-->D;\n    C-->D;";
+    let selectedProject = null;
+    const defaultContent = "graph TD;\n    A[Create a project]-->B[Create a diagram];\n    B-->C[Copy diagram to clipboard];\n    B-->D[Export diagram as PNG];\n    C-->E[Happiness];\n    D-->E[Happiness];\n    A[Create a project]-->F[Export project];\n    F--Import project-->A";
     let editor = null;
 
     async function runAsync() {
@@ -97,7 +100,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function renderAsync(editor) {
         const element = document.createElement('div', { id: 'rendered' });
         const code = editor.getValue();
-        console.log(code);
+        try {
+            await mermaid.parse(code, { suppressErrors: false });
+        } catch(err) {
+            consoleElt.innerHTML = err.toString().replace(/\n/g, '<br/>');
+            console.error(err);
+            return;
+        }
+        consoleElt.innerText = '';
         const { svg } = await mermaid.render("rendered", code);
         if (svg) {
             preview.innerHTML = svg;
@@ -285,6 +295,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadFiles();
             showNotification('Diagram renamed successfully!');
         }
+    }
+
+    function downloadAll() {
+        const files = getFiles();
+        const archive = JSON.stringify(files);
+        const a = document.createElement('a');
+        a.href = 'data:application/json,' + encodeURIComponent(archive);
+        a.download = 'diagrams.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);    
     }
 
     await runAsync();
