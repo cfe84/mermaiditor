@@ -73,7 +73,7 @@
 
         .selector {
             padding: 10px;
-            font-size: 14px;
+            font-size: 1em;
             background-color: white;
             /* border-color: black; */
             border-width: 0px;
@@ -87,6 +87,13 @@
             cursor: pointer;
         }
 
+        #instructions {
+            font-size: .8em;
+            color: #888;
+            text-align: center;
+            margin: 5px;
+        }
+
         #project-selector {
             width: 200px;
         }
@@ -96,25 +103,8 @@
         }
 
         #navigator-container {
-            font-size: 14px;
+            font-size: .9em;
             color: #888;
-        }
-
-        .menu-btn {
-            display: inline-block;
-            background-color: white;
-            /* border-color: black; */
-            border-width: 0px;
-            padding: 10px;
-            font-size: 14px;
-            margin: 0;
-            width: 70px;
-            color: gray
-        }
-
-        .menu-btn:hover {
-            background-color: #f0f0f0;
-            cursor: pointer;
         }
 
         #editor-container {
@@ -124,6 +114,7 @@
 
         #console {
             max-height: 50px;
+            font-size: .8em;
             color: rgb(153, 18, 18);
             overflow-y: scroll;
         }
@@ -144,6 +135,7 @@
                 <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
             </div>
             <div id="console"></div>
+            <div id="instructions">This uses mermaid.js to render diagrams. Documentation <a href="https://mermaid.js.org/intro/">available here</a>.</div>
         </div>
         <div id="split-bar"></div>
         <div id="preview-container">
