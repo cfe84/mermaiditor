@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
             lineNumbers: true,
-            mode: "markdown",
             theme: "dracula",
             autoCloseBrackets: true,
             matchBrackets: true
