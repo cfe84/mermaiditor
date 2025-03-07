@@ -58,14 +58,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const container = document.getElementById('container');
         const leftBar = document.getElementById('left-bar');
         const splitBar = document.getElementById('split-bar');
-        const previewContainer = document.getElementById('preview-container');
+        const rightBar = document.getElementById('right-bar');
         let isResizing = false;
 
         container.style.display = 'flex';
         container.style.height = '100%';
         container.style.width = '100%';
         leftBar.style.width = '50%';
-        previewContainer.style.width = '50%';
+        rightBar.style.width = '50%';
         leftBar.style.resize = 'horizontal';
         leftBar.style.overflow = 'auto';
 
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!isResizing) return;
             const offsetRight = container.clientWidth - (e.clientX - container.offsetLeft);
             leftBar.style.width = `${container.clientWidth - offsetRight - 3}px`;
-            previewContainer.style.width = `${offsetRight - 2}px`;
+            rightBar.style.width = `${offsetRight - 2}px`;
         });
 
         document.addEventListener('mouseup', function(e) {

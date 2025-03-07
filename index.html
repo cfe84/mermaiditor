@@ -49,26 +49,24 @@
         }
 
         .smallBtn {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
             border-radius: 10px;
             width: 40px;
             height: 40px;
             color: white;
             border: none;
-            display: flex;
+            display: inline-block;
+            margin: 5px;
             align-items: center;
             justify-content: center;
-            margin-left: 10px;
         }
 
-        #copy-btn {
-            right: 60px; /* Adjust position for the copy button */
+        .smallBtn:hover {
+            background-color: #555;
+            cursor: pointer;
         }
 
-        #download-btn {
-            right: 10px; /* Adjust position for the download button */
+        #preview-menu {
+            text-align: right;
         }
 
         .selector {
@@ -138,15 +136,18 @@
             <div id="instructions">This uses mermaid.js to render diagrams. Documentation <a href="https://mermaid.js.org/intro/">available here</a>.</div>
         </div>
         <div id="split-bar"></div>
-        <div id="preview-container">
-            <div id="preview"></div>
-            <button class="smallBtn" id="copy-btn">
-                📋
-            </button>
-            <button class="smallBtn" id="download-btn">
-                💾
-            </button>
-        </div>
+        <div id="right-bar">
+            <div id="preview-menu">
+                <button class="smallBtn" id="copy-btn">
+                    📋
+                </button>
+                <button class="smallBtn" id="download-btn">
+                    💾
+                </button>
+            </div>
+            <div id="preview-container">
+                <div id="preview"></div>
+            </div>
     </div>
     <!-- <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
     <div id="preview"></div> -->
