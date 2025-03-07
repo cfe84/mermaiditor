@@ -75,30 +75,45 @@
             padding: 10px;
             font-size: 14px;
             background-color: white;
-            border-color: black;
-            border-width: 1px;
+            /* border-color: black; */
+            border-width: 0px;
             box-sizing: border-box;
             margin: 0;
             display: inline-block;
         }
 
+        .selector:hover {
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+
         #project-selector {
-            width: 140px;
+            width: 200px;
         }
 
         #file-selector {
-            width: calc(100% - 300px); /* Adjust width to fill remaining space */
+            width: calc(100% - 400px);
+        }
+
+        #navigator-container {
+            font-size: 14px;
         }
 
         .menu-btn {
             display: inline-block;
             background-color: white;
-            border-color: black;
-            border-width: 1px;
+            /* border-color: black; */
+            border-width: 0px;
             padding: 10px;
             font-size: 14px;
             margin: 0;
-            width: 80px;
+            width: 70px;
+            color: gray
+        }
+
+        .menu-btn:hover {
+            background-color: #f0f0f0;
+            cursor: pointer;
         }
 
         #editor-container {
@@ -121,9 +136,8 @@
                 <h1>Mermaiditor</h1>
             </div>
             <div id="navigator-container">
-            <select id="project-selector" class="selector">
-            </select><select id="file-selector" class="selector">
-            </select><button class="menu-btn" id="rename-btn">Rename</button><button class="menu-btn" id="delete-btn">Delete</button>
+            Project - <select id="project-selector" class="selector"></select>
+            Diagram - <select id="file-selector" class="selector"></select>
             </div>
             <div id="editor-container">
                 <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
@@ -136,7 +150,6 @@
             <button class="smallBtn" id="copy-btn">
                 📋
             </button>
-
             <button class="smallBtn" id="download-btn">
                 💾
             </button>
