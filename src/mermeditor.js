@@ -127,6 +127,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function getPngCanvas(height, width, svgString) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const svg = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svg);
+        const img = new Image();
+        height = height * 4;
+        width = width * 4;
+
+        return new Promise((resolve, reject) => {
+            img.onload = function() {
+                canvas.width = width;
+                canvas.height = height;
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, width, height);
+                context.drawImage(img, 0, 0, width, height);
+                URL.revokeObjectURL(url);
+        
+                resolve(canvas);
+            };
+        
+            img.onerror = function(e) {
+                console.error('Failed to load SVG as image: ', e);
+                alert('Failed to load SVG as image: ' + e.toString());
+            };
+        
+            img.src = url;
+        });
+    }
+
     function showNotification(message) {
         const notification = document.createElement('div');
         notification.innerText = message;
@@ -142,32 +172,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => {
             document.body.removeChild(notification);
         }, 2000);
-    }
-
-    function getPngCanvas(height, width, svgString) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        const svg = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svg);
-        const img = new Image();
-
-        return new Promise((resolve, reject) => {
-            img.onload = function() {
-                canvas.width = width;
-                canvas.height = height;
-                context.drawImage(img, 0, 0, width, height);
-                URL.revokeObjectURL(url);
-        
-                resolve(canvas);
-            };
-        
-            img.onerror = function(e) {
-                console.error('Failed to load SVG as image: ', e);
-                alert('Failed to load SVG as image: ' + e.toString());
-            };
-        
-            img.src = url;
-        });
     }
 
     function openLastSelectedProject() {
