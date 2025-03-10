@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const projectSelector = document.getElementById('project-selector');
     let selectedProject = null;
 
+    const readme = "graph TD;\n    A[\"This default project contains a number of sample diagrams that you can use for reference.\"]\n	B[\"I recommend you start by creating a new project to save your diagrams.\"]\n	C[\"If you don't want to keep those examples, you can delete the sample project using the option in the projects drop down.\"]\n	D[\"Have fun!\"]\n	A --> B\n    A --> C\n    B --> D\n    C --> D";
     const defaultContent = "graph TD;\n    A[Create a project]-->B[Create a diagram];\n    B-->C[Copy diagram to clipboard];\n    B-->D[Export diagram as PNG];\n    C-->E[Happiness];\n    D-->E[Happiness];\n    A[Create a project]-->F[Export project];\n    F--Import project-->A";
     const sequenceExample = "sequenceDiagram;\n    A->>B: Hello B, how are you?\n    B->>A: I am good thanks!\n    A->>C: Hello C, how are you?\n    C->>A: I am good thanks!";
     const classDiagramExample = "---\ntitle: Animal example\n---\nclassDiagram\n    note \"From Duck till Zebra\"\n    Animal <|-- Duck\n    note for Duck \"can fly\ncan swim\ncan dive\ncan help in debugging\"\n    Animal <|-- Fish\n    Animal <|-- Zebra\n    Animal : +int age\n    Animal : +String gender\n    Animal: +isMammal()\n    Animal: +mate()\n    class Duck{\n        +String beakColor\n        +swim()\n        +quack()\n    }\n    class Fish{\n        -int sizeInFeet\n        -canEat()\n    }\n    class Zebra{\n        +bool is_wild\n        +run()\n    }\n";
@@ -100,8 +101,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.style.display = 'flex';
         container.style.height = '100%';
         container.style.width = '100%';
-        leftBar.style.width = '50%';
-        rightBar.style.width = '50%';
+        const offsetRight = container.clientWidth / 2;
+        leftBar.style.width = `${container.clientWidth - offsetRight - 3}px`;
+        rightBar.style.width = `${offsetRight - 2}px`;
         leftBar.style.resize = 'horizontal';
         leftBar.style.overflow = 'auto';
 
@@ -329,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const file = { id: uuidv4(), name: key, content: examples[key] };
                 project.diagrams[file.id] = file;
             });
+            project.diagrams[fileId] = { id: fileId, name: 'README', content: readme };
         } else {
             project.diagrams[fileId] = { id: fileId, name: 'Default', content: defaultContent };
         }
