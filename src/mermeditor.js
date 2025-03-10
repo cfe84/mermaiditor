@@ -259,6 +259,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         exportOption.innerText = '--- Export this project';
         projectSelector.appendChild(exportOption);
 
+        const duplicateOption = document.createElement('option');
+        duplicateOption.value = 'duplicate';
+        duplicateOption.innerText = '--- Duplicate this project';
+        projectSelector.appendChild(duplicateOption);
+
         const renameOption = document.createElement('option');
         renameOption.value = 'rename';
         renameOption.innerText = '--- Rename this project';
@@ -301,6 +306,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             deleteProject();
         } else if (selected === 'rename') {
             renameProject();
+        } else if (selected === 'duplicate') {
+            duplicateProject();
         } else if (selected === 'export') {
             downloadProject();
         } else {
@@ -327,11 +334,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectedFile: fileId,
         };
         if (name === "Default") {
+            project.diagrams[fileId] = { id: fileId, name: 'README', content: readme };
             Object.keys(examples).forEach(key => {
                 const file = { id: uuidv4(), name: key, content: examples[key] };
                 project.diagrams[file.id] = file;
             });
-            project.diagrams[fileId] = { id: fileId, name: 'README', content: readme };
         } else {
             project.diagrams[fileId] = { id: fileId, name: 'Default', content: defaultContent };
         }
@@ -379,6 +386,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function duplicateProject() {
+        const name = prompt(`New project name for "${selectedProject.name}"?`, selectedProject.name);
+        if (!name) {
+            return;
+        }
+        const project = { ...selectedProject };
+        project.name = name;
+        project.id = uuidv4(); // Change id to prevent overwrite
+        saveProject(project);
+        openProject(project.id);
+        showNotification('Project duplicated successfully!');
+    }
+
+    function importProject() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const project = JSON.parse(e.target.result);
+                    project.id = uuidv4(); // Change id to prevent overwrite
+                    saveProject(project);
+                    openProject(project.id);
+                    showNotification('Project imported successfully!');
+                } catch (error) {
+                    alert('Failed to import project: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    function downloadProject() {
+        const project = getProject(selectedProject.id);
+        const archive = JSON.stringify(project, null, 2);
+        const a = document.createElement('a');
+        a.href = 'data:application/json,' + encodeURIComponent(archive);
+        a.download = project.name + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);    
+    }
+
     function getSelectedFileId() {
         return selectedProject?.selectedFile;
     }
@@ -417,7 +474,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         renameOption.value = 'rename';
         renameOption.innerText = '--- Rename this diagram';
         fileSelector.appendChild(renameOption);
-        fileSelector.onchange = fileSelectorChange;
+
+        const duplicateOption = document.createElement('option');
+        duplicateOption.value = 'duplicate';
+        duplicateOption.innerText = '--- Duplicate this diagram';
+        fileSelector.appendChild(duplicateOption);
 
         const deleteOption = document.createElement('option');
         deleteOption.value = 'delete';
@@ -435,6 +496,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } else if (selectedFileId === 'delete') {
             deleteFile();
+        } else if (selectedFileId === 'duplicate') {
+            duplicateFile();
         } else if (selectedFileId === 'rename') {
             renameFile();
         } else {
@@ -534,41 +597,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function importProject() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (event) => {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const project = JSON.parse(e.target.result);
-                    project.id = uuidv4(); // Change id to prevent overwrite
-                    saveProject(project);
-                    openProject(project.id);
-                    showNotification('Project imported successfully!');
-                } catch (error) {
-                    alert('Failed to import project: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    }
-
-    function downloadProject() {
-        const project = getProject(selectedProject.id);
-        const archive = JSON.stringify(project, null, 2);
-        const a = document.createElement('a');
-        a.href = 'data:application/json,' + encodeURIComponent(archive);
-        a.download = project.name + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);    
+    function duplicateFile() {
+        const fileId = getSelectedFileId();
+        if (!fileId) {
+            return;
+        }
+        const file = getFile(getSelectedFileId());
+        const newName = prompt(`New diagram name for "${file.name}"?`, file.name);
+        if (newName) {
+            const newFile = { ...file, id: uuidv4(), name: newName };
+            saveFile(newFile);
+            openFile(newFile.id);
+            loadFiles();
+            showNotification('Diagram duplicated successfully!');
+        }
     }
 
     function uuidv4() {
