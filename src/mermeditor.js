@@ -184,8 +184,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function getPngCanvas(height, width, svgString) {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        const svg = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svg);
+        const encodedSvg = encodeURIComponent(svgString)
+            .replace(/'/g, "%27")
+            .replace(/"/g, "%22")
+            .replace(/%3Cbr%3E/g, "%3Cbr%2F%3E"); // This is a fix for the <br> tag that mermaid is outputting incorrectly
+        const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+        console.log(dataUrl);
         const img = new Image();
         height = height * 4;
         width = width * 4;
@@ -197,17 +201,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 context.fillStyle = 'white';
                 context.fillRect(0, 0, width, height);
                 context.drawImage(img, 0, 0, width, height);
-                URL.revokeObjectURL(url);
-        
                 resolve(canvas);
             };
         
             img.onerror = function(e) {
-                console.error('Failed to load SVG as image: ', e);
-                alert('Failed to load SVG as image: ' + e.toString());
+                console.error('Failed to load SVG as image: ', e.message, e.type);
+                console.dir(e);
+                alert('Failed to load SVG as image.');
             };
         
-            img.src = url;
+            img.src = dataUrl;
         });
     }
 
