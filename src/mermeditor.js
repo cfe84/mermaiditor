@@ -547,6 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fileVersion = file.version;
         setSelectedFile(id);
         editor.setValue(file.content);
+        document.title = `Mermaiditor - ${selectedProject.name} / ${file.name}`;
      }
 
     function saveFile(file) {

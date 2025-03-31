@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mermaiditor - Mermaid Chart Editor</title>
+    <link rel="icon" type="image/png" href="mermaiditor.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
@@ -19,12 +20,23 @@
             font-family: 'Arial', sans-serif;
             height: 100vh;
             margin: 0;
+            margin-top: 5px;
         }
         h1 {
-            font-size: 1.25em;
+            font-size: 1.5em;
             color: #333;
-            text-align: center;
-            margin: 5px;
+            /* text-align: center; */
+            margin: 0px;
+        }
+        h1 span {
+            padding-left: 15px;
+        }
+        h1 img {
+            width: 32px;
+            height: 32px;
+            vertical-align: middle;
+            padding-bottom: 5px;
+            padding-left: 10px;
         }
         textarea {
             width: 100%;
@@ -70,7 +82,7 @@
         }
 
         .selector {
-            padding: 10px;
+            padding: 5px;
             font-size: 1em;
             background-color: white;
             /* border-color: black; */
@@ -103,6 +115,7 @@
         #navigator-container {
             font-size: .9em;
             color: #888;
+            padding-left: 5px
         }
 
         #editor-container {
@@ -127,7 +140,7 @@
     <div id="container">
         <div id="left-bar">
             <div>
-                <h1>Mermaiditor</h1>
+                <h1><img src="./mermaiditor.png" alt="Icon"/><span>Mermaiditor</span></h1>
             </div>
             <div id="navigator-container">
             Project <select id="project-selector" class="selector"></select>
