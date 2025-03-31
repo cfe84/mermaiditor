@@ -107,9 +107,12 @@
         #project-selector {
             width: 200px;
         }
+        #theme-selector {
+            width: 200px;
+        }
 
         #file-selector {
-            width: calc(100% - 400px);
+            width: calc(100% - 600px);
         }
 
         #navigator-container {
@@ -143,8 +146,9 @@
                 <h1><img src="./mermaiditor.png" alt="Icon"/><span>Mermaiditor</span></h1>
             </div>
             <div id="navigator-container">
-            Project <select id="project-selector" class="selector"></select>
-            Diagram <select id="file-selector" class="selector"></select>
+                Project <select id="project-selector" class="selector"></select>
+                Diagram <select id="file-selector" class="selector"></select>
+                Theme <select id="theme-selector" class="selector"></select>
             </div>
             <div id="editor-container">
                 <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>

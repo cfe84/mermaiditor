@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fileSelector = document.getElementById('file-selector');
     const consoleElt = document.getElementById('console');
     const projectSelector = document.getElementById('project-selector');
+    const themeSelector = document.getElementById('theme-selector');
     let fileVersion = null;
     let selectedProject = null;
 
@@ -75,11 +76,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const width = rendered.clientWidth;
             await downloadAsync(height, width, preview.innerHTML, 'diagram.png');
         });
-
     
         openLastSelectedProject();
         loadProjects();
         loadFiles();
+        loadThemes();
+    }
+
+    function reloadMermaid() {
+        mermaid.initialize({ theme: selectedProject?.theme });
+        renderAsync(editor);
     }
 
     async function onChangeAsync() {
@@ -365,10 +371,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function openProject(id) {
         selectedProject = getProject(id);
+        if (selectedProject.theme) {
+            mermaid.initialize({ theme: selectedProject.theme || "default" });
+        }
         localStorage.setItem('selectedProject', selectedProject.id);
         loadFiles();
         openLastSelectedFile();
         loadProjects();
+        loadThemes();
     }
 
     function deleteProject() {
@@ -626,6 +636,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadFiles();
             showNotification('Diagram duplicated successfully!');
         }
+    }
+
+    function loadThemes() {
+        const themes = ['default', 'neutral', 'dark', 'forest', 'base'];
+        themeSelector.innerHTML = '';
+        const selectedTheme = selectedProject?.theme || 'default';
+        themes.forEach(theme => {
+            const option = document.createElement('option');
+            option.value = theme;
+            option.innerText = theme.charAt(0).toUpperCase() + theme.slice(1);
+            option.selected = theme === selectedTheme;
+            themeSelector.appendChild(option);
+        });
+        themeSelector.onchange = () => {
+            selectedProject.theme = themeSelector.value;
+            saveProject(selectedProject);
+            reloadMermaid();
+        };
     }
 
     function uuidv4() {
