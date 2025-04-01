@@ -2,6 +2,7 @@ import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.es
 
 document.addEventListener('DOMContentLoaded', async () => {
     const preview = document.getElementById('preview');
+    const previewWrapper = document.getElementById('preview-wrapper');
     const fileSelector = document.getElementById('file-selector');
     const consoleElt = document.getElementById('console');
     const projectSelector = document.getElementById('project-selector');
@@ -48,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         Gantt: ganttExample
     }
     let editor = null;
+    let onloaded = null;
 
     async function runAsync() {
         mermaid.initialize({ startOnLoad: false });
@@ -153,6 +155,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (svg) {
             preview.innerHTML = svg;
         }
+        if (onloaded) {
+                onloaded();
+                onloaded = null;
+        }
     }
 
     async function downloadAsync(height, width, svgString, filename) {
@@ -191,8 +197,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
         console.log(dataUrl);
         const img = new Image();
-        height = height * 4;
-        width = width * 4;
+        const copyScale = Math.max(scale, 4);
+        height = height * copyScale;
+        width = width * copyScale;
 
         return new Promise((resolve, reject) => {
             img.onload = function() {
@@ -561,6 +568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setSelectedFile(id);
         editor.setValue(file.content);
         document.title = `Mermaiditor - ${selectedProject.name} / ${file.name}`;
+        onloaded = resetZoom;
      }
 
     function saveFile(file) {
@@ -664,6 +672,73 @@ document.addEventListener('DOMContentLoaded', async () => {
           (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
         );
       }
+
+    // Zoom and pan functionality
+
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isPanning = false; // Flag to track panning state
+    let startX = 0; // Starting panning position
+    let startY = 0;
+
+    // Apply the transform to the preview element after panning
+    function updateTransform() {
+        preview.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    previewWrapper.addEventListener('wheel', (event) => {
+        event.preventDefault();
+
+        const zoomSpeed = 0.25;
+        const delta = event.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+
+        const newScale = Math.min(Math.max(scale + delta, 0.5), 20); // Limit zoom between 0.5x and 20x
+
+        const rect = previewWrapper.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        // This needs fixing. It should center on the mouse position but it doesn't
+        translateX -= (mouseX / scale - mouseX / newScale);
+        translateY -= (mouseY / scale - mouseY / newScale);
+
+        scale = newScale;
+        updateTransform();
+    });
+
+    previewWrapper.addEventListener('mousedown', (event) => {
+        isPanning = true;
+        startX = event.clientX - translateX;
+        startY = event.clientY - translateY;
+        previewWrapper.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (!isPanning) return;
+
+        translateX = event.clientX - startX;
+        translateY = event.clientY - startY;
+        updateTransform();
+    });
+
+    document.addEventListener('mouseup', (event) => {
+        isPanning = false;
+        previewWrapper.style.cursor = 'grab';
+    });
+
+    previewWrapper.addEventListener('dblclick', (event) => {
+        resetZoom();
+    });
+
+    function resetZoom() {
+        translateX = 0;
+        translateY = 0;
+        var wScale = previewWrapper.clientWidth / preview.clientWidth;
+        var hScale = previewWrapper.clientHeight / preview.clientHeight;
+        scale = Math.min(wScale, hScale);
+        updateTransform();
+    }
 
     await runAsync();
 });

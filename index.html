@@ -46,13 +46,20 @@
             font-size: 16px;
             box-sizing: border-box;
         }
-        #preview {
+
+        #preview-wrapper {
             width: 100%;
             height: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            overflow: auto;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
         }
+
+        #preview {
+            transform-origin: 0 0; /* Set the origin for scaling */
+            position: absolute;
+        }
+
         #split-bar {
             width: 5px;
             cursor: col-resize;
@@ -137,7 +144,7 @@
             height: calc(100% - 50px);
         }
     </style>
-    <script type="module" src="src/mermeditor.js"></script>
+    <script type="module" src="src/mermaiditor.js"></script>
 </head>
 <body>
     <div id="container">
@@ -167,10 +174,10 @@
                 </button>
             </div>
             <div id="preview-container">
-                <div id="preview"></div>
+                <div id="preview-wrapper">
+                    <div id="preview"></div>
+                </div>
             </div>
     </div>
-    <!-- <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
-    <div id="preview"></div> -->
 </body>
 </html>
