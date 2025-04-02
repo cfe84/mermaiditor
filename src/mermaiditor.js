@@ -65,19 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
         editor.on("change", onChangeAsync);
     
-        document.getElementById('copy-btn').addEventListener('click', async () => {
-            const rendered = document.getElementById('rendered');
-            const height = rendered.clientHeight;
-            const width = rendered.clientWidth;
-            await copyAsync(height, width, preview.innerHTML);
-        });
-    
-        document.getElementById('download-btn').addEventListener('click', async () => {
-            const rendered = document.getElementById('rendered');
-            const height = rendered.clientHeight;
-            const width = rendered.clientWidth;
-            await downloadAsync(height, width, preview.innerHTML, 'diagram.png');
-        });
+        document.getElementById('copy-btn').addEventListener('click', triggerCopyAsync);
+        document.getElementById('download-btn').addEventListener('click', triggerDownloadAsync);
+        document.getElementById('copy-diagram').addEventListener('click', triggerCopyAsync);
+        document.getElementById('save-diagram').addEventListener('click', triggerDownloadAsync);
     
         openLastSelectedProject();
         loadProjects();
@@ -161,6 +152,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+
+    /********
+     * Context menu
+     ********/
+
+    const contextMenu = document.getElementById('context-menu');
+    // Show the context menu on right-click
+    previewWrapper.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+
+        // Position the context menu
+        contextMenu.style.left = `${event.pageX}px`;
+        contextMenu.style.top = `${event.pageY}px`;
+        contextMenu.style.display = 'block';
+    });
+
+    // Hide the context menu on click anywhere
+    previewWrapper.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+    });
+
+    async function triggerCopyAsync() {
+        contextMenu.style.display = 'none';
+
+        const rendered = document.getElementById('rendered');
+        const height = rendered.clientHeight;
+        const width = rendered.clientWidth;
+        await copyAsync(height, width, preview.innerHTML);
+    }
+
+    async function triggerDownloadAsync() {
+        contextMenu.style.display = 'none';
+
+        const rendered = document.getElementById('rendered');
+        const height = rendered.clientHeight;
+        const width = rendered.clientWidth;
+        await downloadAsync(height, width, preview.innerHTML, 'diagram.png');
+    }
+
     async function downloadAsync(height, width, svgString, filename) {
         const canvas = await getPngCanvas(height, width, svgString);
         const png = canvas.toDataURL('image/png');
@@ -195,7 +225,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/"/g, "%22")
             .replace(/%3Cbr%3E/g, "%3Cbr%2F%3E"); // This is a fix for the <br> tag that mermaid is outputting incorrectly
         const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
-        console.log(dataUrl);
         const img = new Image();
         const copyScale = Math.max(scale, 4);
         height = height * copyScale;
@@ -237,6 +266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.removeChild(notification);
         }, 2000);
     }
+
+    /********
+     * Project management
+     * ********/
 
     function openLastSelectedProject() {
         const id = localStorage.getItem('selectedProject');
@@ -708,6 +741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     previewWrapper.addEventListener('mousedown', (event) => {
+        if (event.button !== 0) return;
         isPanning = true;
         startX = event.clientX - translateX;
         startY = event.clientY - translateY;
@@ -723,6 +757,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.addEventListener('mouseup', (event) => {
+        if (event.button !== 0) return;
+
         isPanning = false;
         previewWrapper.style.cursor = 'grab';
     });
@@ -739,6 +775,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         scale = Math.min(wScale, hScale);
         updateTransform();
     }
+
 
     await runAsync();
 });

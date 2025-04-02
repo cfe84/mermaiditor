@@ -143,10 +143,43 @@
         #preview-container {
             height: calc(100% - 50px);
         }
+
+        #context-menu {
+            position: absolute;
+            display: none;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            font-size: 14px;
+            padding: 5px 0;
+            border-radius: 5px;
+        }
+        
+        #context-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        #context-menu li {
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+        
+        #context-menu li:hover {
+            background-color: #f0f0f0;
+        }
     </style>
     <script type="module" src="src/mermaiditor.js"></script>
 </head>
 <body>
+    <div id="context-menu">
+        <ul>
+            <li id="copy-diagram">📋 Copy Diagram</li>
+            <li id="save-diagram">📥 Save Diagram</li>
+        </ul>
+    </div>
     <div id="container">
         <div id="left-bar">
             <div>
