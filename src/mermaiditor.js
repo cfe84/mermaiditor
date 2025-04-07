@@ -130,6 +130,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('mouseup', function(e) {
             isResizing = false;
         });
+
+        window.addEventListener('resize', function() {
+            const offset = container.clientWidth - leftBar.clientWidth;
+            rightBar.style.width = `${offset - 2}px`;
+        });
     }
 
     async function renderAsync(editor) {
