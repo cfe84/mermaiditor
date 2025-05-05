@@ -1,7 +1,8 @@
-import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.esm.min.mjs';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const preview = document.getElementById('preview');
+    const header = document.getElementById('header');
     const previewWrapper = document.getElementById('preview-wrapper');
     const fileSelector = document.getElementById('file-selector');
     const consoleElt = document.getElementById('console');
@@ -102,19 +103,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function hookResize() {
         const container = document.getElementById('container');
+        const previewMenu = document.getElementById('preview-menu');
         const leftBar = document.getElementById('left-bar');
         const splitBar = document.getElementById('split-bar');
         const rightBar = document.getElementById('right-bar');
         let isResizing = false;
 
         container.style.display = 'flex';
-        container.style.height = '100%';
+        container.style.height = `calc(100% - ${header.clientHeight}px)`;
         container.style.width = '100%';
         const offsetRight = container.clientWidth / 2;
         leftBar.style.width = `${container.clientWidth - offsetRight - 3}px`;
         rightBar.style.width = `${offsetRight - 2}px`;
         leftBar.style.resize = 'horizontal';
         leftBar.style.overflow = 'auto';
+        previewWrapper.style.height = (container.clientHeight - previewMenu.clientHeight)+ 'px';
 
         splitBar.addEventListener('mousedown', function(e) {
             isResizing = true;
