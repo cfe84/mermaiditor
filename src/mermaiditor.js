@@ -561,10 +561,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     function fileSelectorChange() {
         const selectedFileId = fileSelector.value;
         if (selectedFileId === 'add') {
-            const name = prompt('Diagram name');
-            if (name) {
-                createFile(name);
-            }
+            // Show add-diagram dialog
+            const dialog = document.getElementById('add-diagram-dialog');
+            const nameInput = document.getElementById('diagram-name');
+            const templateSelect = document.getElementById('diagram-template');
+            // reset inputs
+            nameInput.value = '';
+            templateSelect.innerHTML = '';
+            // populate templates
+            Object.keys(examples).forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.innerText = key;
+                templateSelect.appendChild(opt);
+            });
+            dialog.style.display = 'flex';
         } else if (selectedFileId === 'delete') {
             deleteFile();
         } else if (selectedFileId === 'duplicate') {
@@ -577,6 +588,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadFiles();
     }
 
+    // Add dialog event handlers
+    document.getElementById('add-diagram-ok').addEventListener('click', () => {
+        const dialog = document.getElementById('add-diagram-dialog');
+        const name = document.getElementById('diagram-name').value.trim();
+        const template = document.getElementById('diagram-template').value;
+        if (name) {
+            const content = examples[template] || defaultContent;
+            createFile(name, content);
+            dialog.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('add-diagram-cancel').addEventListener('click', () => {
+        document.getElementById('add-diagram-dialog').style.display = 'none';
+        loadFiles();
+    });
+
     function openLastSelectedFile() {
         const id = getSelectedFileId();
         if (id) {
@@ -584,8 +612,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function createFile(name) {
-        const file = { id: uuidv4(), version: uuidv4(), name, content: defaultContent };
+    function createFile(name, content = defaultContent) {
+        const file = { id: uuidv4(), version: uuidv4(), name, content };
         saveFile(file);
         openFile(file.id);
         loadFiles();
