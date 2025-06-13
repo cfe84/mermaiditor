@@ -325,6 +325,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         exportOption.value = 'export';
         exportOption.innerText = '--- Export this project';
         projectSelector.appendChild(exportOption);
+        
+        const shareOption = document.createElement('option');
+        shareOption.value = 'share';
+        shareOption.innerText = '--- Get Encoded URL';
+        projectSelector.appendChild(shareOption);
 
         const duplicateOption = document.createElement('option');
         duplicateOption.value = 'duplicate';
@@ -377,6 +382,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             duplicateProject();
         } else if (selected === 'export') {
             downloadProject();
+        } else if (selected === 'share') {
+            shareProjectUrl();
         } else {
             openProject(selected);
         }
@@ -483,10 +490,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             reader.onload = (e) => {
                 try {
                     const project = JSON.parse(e.target.result);
-                    project.id = uuidv4(); // Change id to prevent overwrite
-                    saveProject(project);
-                    openProject(project.id);
-                    showNotification('Project imported successfully!');
+                    
+                    // Check if a project with the same ID already exists
+                    const existingProject = getProject(project.id);
+                    
+                    if (existingProject) {
+                        // Show the conflict dialog
+                        showImportConflictDialog(project, existingProject);
+                    } else {
+                        // No conflict, just save the project
+                        saveProject(project);
+                        openProject(project.id);
+                        showNotification('Project imported successfully!');
+                    }
                 } catch (error) {
                     alert('Failed to import project: ' + error.message);
                 }
@@ -812,6 +828,134 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateTransform();
     }
 
+    // Project sharing via URL functions
+    function shareProjectUrl() {
+        const project = getProject(selectedProject.id);
+        const projectJson = JSON.stringify(project);
+        
+        // Use LZ-String compression for better URL compression
+        const compressed = LZString.compressToEncodedURIComponent(projectJson);
+        
+        // Generate the full URL with the compressed data
+        const baseUrl = window.location.href.split('?')[0];
+        const sharedUrl = `${baseUrl}?project=${compressed}`;
+        
+        // Show the share URL dialog
+        const dialog = document.getElementById('share-url-dialog');
+        const urlInput = document.getElementById('share-url-input');
+        
+        // Set the URL in the input field
+        urlInput.value = sharedUrl;
+        
+        // Show the dialog
+        dialog.style.display = 'flex';
+        
+        // Handle copy button
+        document.getElementById('copy-share-url').onclick = () => {
+            urlInput.select();
+            document.execCommand('copy');
+            showNotification('URL copied to clipboard!');
+        };
+        
+        // Handle close button
+        document.getElementById('share-url-close').onclick = () => {
+            dialog.style.display = 'none';
+            loadProjects(); // Reload the project selector dropdown
+        };
+    }
+
+    // Function to check for encoded project in URL params
+    function checkForSharedProject() {
+        const params = new URLSearchParams(window.location.search);
+        const projectData = params.get('project');
+        
+        if (projectData) {
+            try {
+                let decodedData;
+                // First try LZString decompression (new format)
+                try {
+                    decodedData = LZString.decompressFromEncodedURIComponent(projectData);
+                    if (!decodedData) {
+                        // Fall back to base64 (old format)
+                        decodedData = decodeURIComponent(atob(projectData));
+                    }
+                } catch (e) {
+                    // Fall back to base64 (old format)
+                    decodedData = decodeURIComponent(atob(projectData));
+                }
+                
+                const sharedProject = JSON.parse(decodedData);
+                
+                // Check if a project with the same ID already exists
+                const existingProject = getProject(sharedProject.id);
+                
+                if (existingProject) {
+                    // Show the conflict dialog
+                    showImportConflictDialog(sharedProject, existingProject);
+                } else {
+                    // No conflict, just save the project
+                    saveProject(sharedProject);
+                    openProject(sharedProject.id);
+                    showNotification('Shared project imported successfully!');
+                    
+                    // Clean the URL to avoid reimporting on refresh
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } catch (error) {
+                console.error('Failed to import shared project:', error);
+                alert('Failed to import shared project: ' + error.message);
+            }
+        }
+    }
+    
+    // Show dialog for resolving project import conflicts
+    function showImportConflictDialog(sharedProject, existingProject) {
+        const dialog = document.getElementById('import-conflict-dialog');
+        const messageEl = document.getElementById('import-conflict-message');
+        
+        messageEl.textContent = `A project with the name "${sharedProject.name}" already exists. What would you like to do?`;
+        
+        dialog.style.display = 'flex';
+        
+        // Handle overwrite button
+        document.getElementById('import-overwrite').onclick = () => {
+            // Overwrite existing project but keep the same ID
+            saveProject(sharedProject);
+            openProject(sharedProject.id);
+            dialog.style.display = 'none';
+            showNotification('Project overwritten successfully!');
+            
+            // Clean the URL to avoid reimporting on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        };
+        
+        // Handle create copy button
+        document.getElementById('import-new-copy').onclick = () => {
+            // Create new project with different ID
+            sharedProject.id = uuidv4();
+            sharedProject.name = `${sharedProject.name} (Copy)`;
+            saveProject(sharedProject);
+            openProject(sharedProject.id);
+            dialog.style.display = 'none';
+            showNotification('Project imported as a copy!');
+            
+            // Clean the URL to avoid reimporting on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        };
+        
+        // Handle cancel button
+        document.getElementById('import-cancel').onclick = () => {
+            dialog.style.display = 'none';
+            
+            // Clean the URL to avoid reimporting on refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        };
+    }
 
     await runAsync();
+    
+    // Check for shared project in URL on page load
+    setTimeout(() => {
+        checkForSharedProject();
+    }, 500); // Short delay to ensure UI is fully loaded
 });

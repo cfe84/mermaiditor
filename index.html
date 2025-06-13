@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mermaiditor - Mermaid Chart Editor</title>
     <link rel="icon" type="image/png" href="mermaiditor.png">
+    <script src="src/lz-string.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/dracula.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
@@ -187,20 +188,88 @@
             width: 90%;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
-        #add-diagram-dialog label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        #add-diagram-dialog input,
-        #add-diagram-dialog select {
+        
+        /* Import conflict dialog */
+        #import-conflict-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 8px;
-            margin-top: 4px;
-            box-sizing: border-box;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
         }
-        #add-diagram-dialog button {
-            margin-right: 10px;
+        #import-conflict-dialog .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        #import-conflict-dialog p {
+            margin-bottom: 20px;
+        }
+        #import-conflict-dialog .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        #import-conflict-dialog button {
             padding: 8px 16px;
+        }
+        
+        /* Share URL dialog */
+        #share-url-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        #share-url-dialog .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 550px;
+            width: 95%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        #share-url-dialog .url-container {
+            display: flex;
+            margin: 15px 0;
+        }
+        #share-url-dialog #share-url-input {
+            flex-grow: 1;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+        }
+        #share-url-dialog #copy-share-url {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        #share-url-dialog .hint {
+            font-size: 13px;
+            color: #666;
+            margin-top: 0;
+        }
+        #share-url-dialog .button-row {
+            text-align: center;
+            margin-top: 20px;
         }
     </style>
     <script type="module" src="src/mermaiditor.js"></script>
@@ -259,5 +328,35 @@
         <button id="add-diagram-cancel">Cancel</button>
       </div>
     </div>
+
+    <!-- Project Import Conflict Dialog -->
+    <div id="import-conflict-dialog" style="display: none">
+      <div class="modal-content">
+        <h2>Import Project</h2>
+        <p id="import-conflict-message"></p>
+        <div class="button-row">
+          <button id="import-overwrite">Overwrite</button>
+          <button id="import-new-copy">Create Copy</button>
+          <button id="import-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Share URL Dialog -->
+    <div id="share-url-dialog" style="display: none">
+      <div class="modal-content">
+        <h2>Share Project</h2>
+        <p>Share this URL with others to give them access to your project:</p>
+        <div class="url-container">
+          <input type="text" id="share-url-input" readonly />
+          <button id="copy-share-url">Copy</button>
+        </div>
+        <p class="hint">The URL contains your project data and can be imported directly by opening the link.</p>
+        <div class="button-row">
+          <button id="share-url-close">Close</button>
+        </div>
+      </div>
+    </div>
+
   </body>
 </html>
