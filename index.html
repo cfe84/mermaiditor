@@ -119,13 +119,21 @@
         }
 
         #file-selector {
-            width: calc(100% - 600px);
+            width: calc(100% - 800px);
         }
 
         #navigator-container {
             font-size: .9em;
             color: #888;
             padding-left: 5px
+        }
+
+        #navigator-container img {
+            width: 32px;
+            height: 32px;
+            vertical-align: middle;
+            padding-bottom: 5px;
+            padding-left: 10px;
         }
 
         #editor-container {
@@ -282,8 +290,9 @@
         </ul>
     </div>
     <div id="header">
-        <h1><img src="./mermaiditor.png" alt="Icon"/><span>Mermaiditor</span></h1>
         <div id="navigator-container">
+            <img src="./mermaiditor.png" alt="Icon"/><span>Mermaiditor</span>
+            <button id="toggle-editor-btn" class="smallBtn" title="Show/Hide Code Editor">📄</button>
             Project <select id="project-selector" class="selector"></select>
             Diagram <select id="file-selector" class="selector"></select>
             Theme <select id="theme-selector" class="selector"></select>

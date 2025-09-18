@@ -2,9 +2,10 @@
  * UIManager - Handles UI controls, dialogs, and user interactions
  */
 export class UIManager {
-    constructor(projectManager, templateManager) {
+    constructor(projectManager, templateManager, viewPortManager) {
         this.projectManager = projectManager;
         this.templateManager = templateManager;
+        this.viewPortManager = viewPortManager;
         this.elements = {};
         this.initializeElements();
         this.setupEventListeners();
@@ -15,6 +16,7 @@ export class UIManager {
             projectSelector: document.getElementById('project-selector'),
             fileSelector: document.getElementById('file-selector'),
             themeSelector: document.getElementById('theme-selector'),
+            toggleEditorBtn: document.getElementById('toggle-editor-btn'),
             addDiagramDialog: document.getElementById('add-diagram-dialog'),
             importConflictDialog: document.getElementById('import-conflict-dialog'),
             shareUrlDialog: document.getElementById('share-url-dialog'),
@@ -43,6 +45,9 @@ export class UIManager {
         
         // Theme selector
         this.elements.themeSelector.onchange = () => this.handleThemeChange();
+        
+        // Toggle editor button
+        this.elements.toggleEditorBtn.addEventListener('click', () => this.toggleEditor());
         
         // Add diagram dialog
         this.elements.addDiagramOk.addEventListener('click', () => this.handleAddDiagramOk());
@@ -538,5 +543,31 @@ export class UIManager {
 
     setThemeChangeCallback(callback) {
         this.themeChangeCallback = callback;
+    }
+
+    toggleEditor() {
+        const leftBar = document.getElementById('left-bar');
+        const splitBar = document.getElementById('split-bar');
+        const rightBar = document.getElementById('right-bar');
+        const container = document.getElementById('container');
+        
+        if (leftBar.style.display === 'none') {
+            // Show editor
+            leftBar.style.display = '';
+            splitBar.style.display = '';
+            
+            this.viewPortManager.handleWindowResize();
+            
+            this.elements.toggleEditorBtn.style.backgroundColor = '';
+            this.elements.toggleEditorBtn.title = 'Hide Code Editor';
+        } else {
+            // Hide editor
+            leftBar.style.display = 'none';
+            splitBar.style.display = 'none';
+            rightBar.style.width = '100%';
+            this.elements.toggleEditorBtn.style.backgroundColor = '#555';
+            this.elements.toggleEditorBtn.title = 'Show Code Editor';
+        }
+        this.viewPortManager.resetZoom();
     }
 }

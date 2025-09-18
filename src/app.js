@@ -25,7 +25,7 @@ class MermaiditorApp {
             this.managers.renderer = new DiagramRenderer(mermaid);
             this.managers.export = new ExportManager(this.managers.viewport);
             this.managers.editor = new EditorManager(this.managers.project);
-            this.managers.ui = new UIManager(this.managers.project, this.managers.template);
+            this.managers.ui = new UIManager(this.managers.project, this.managers.template, this.managers.viewport);
 
             // Wire up the interactions between managers
             this.setupManagerInteractions();
@@ -51,7 +51,6 @@ class MermaiditorApp {
                 // Set up callback for initial zoom reset
                 this.managers.renderer.setOnLoadedCallback(() => {
                     this.managers.viewport.resetZoom();
-                    setTimeout(() => this.managers.viewport.centerDiagram(), 150);
                 });
                 window.onload = () => {
                     this.managers.renderer.renderDiagram(content);
