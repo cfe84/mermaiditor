@@ -6,14 +6,15 @@ import { saveProject as saveProjectToStorage, getProject as getProjectFromStorag
 import { compressProject, decompressProject } from '../utils/compression.js';
 
 export class ProjectManager {
-    constructor(templateManager) {
+    constructor(logger, templateManager) {
+        this.logger = logger;
         this.templateManager = templateManager;
         this.selectedProject = null;
         this.fileVersion = null;
     }
 
-    // Project management methods
     createProject(name) {
+        this.logger.debug(`Creating project: ${name}`);
         const project = this.newProject(name);
         this.saveProject(project);
         this.openProject(project.id);
@@ -21,6 +22,7 @@ export class ProjectManager {
     }
 
     newProject(name) {
+        this.logger.debug(`New project: ${name}`);
         const projectId = uuidv4();
         const fileId = uuidv4();
         const project = { 
@@ -43,21 +45,25 @@ export class ProjectManager {
     }
 
     saveProject(project) {
+        this.logger.debug(`Saving project: ${project.name}`);
         saveProjectToStorage(project);
         this.selectedProject = project;
     }
 
     getProject(id) {
+        this.logger.debug(`Getting project: ${id}`);
         return getProjectFromStorage(id);
     }
 
     openProject(id) {
+        this.logger.debug(`Opening project: ${id}`);
         this.selectedProject = this.getProject(id);
         localStorage.setItem('selectedProject', this.selectedProject.id);
         return this.selectedProject;
     }
 
     deleteProject() {
+        this.logger.debug(`Deleting project: ${this.selectedProject?.id}`);
         if (!this.selectedProject) return false;
         
         deleteProjectFromStorage(this.selectedProject.id);
@@ -71,6 +77,7 @@ export class ProjectManager {
     }
 
     renameProject(newName) {
+        this.logger.debug(`Renaming project to: ${newName}`);
         if (!this.selectedProject) return false;
         
         this.selectedProject.name = newName;
@@ -79,6 +86,7 @@ export class ProjectManager {
     }
 
     duplicateProject(newName) {
+        this.logger.debug(`Duplicating project to: ${newName}`);
         if (!this.selectedProject) return false;
         
         const project = { ...this.selectedProject };
@@ -90,6 +98,7 @@ export class ProjectManager {
     }
 
     getProjects() {
+        this.logger.debug(`Getting all projects`);
         const projects = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -98,10 +107,12 @@ export class ProjectManager {
                 projects.push(project);
             }
         }
+        this.logger.debug(`Found ${projects.length} projects.`);
         return projects.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     exportProject() {
+        this.logger.debug(`Exporting project: ${this.selectedProject?.id}`);
         if (!this.selectedProject) return null;
         
         const project = this.getProject(this.selectedProject.id);
@@ -109,6 +120,7 @@ export class ProjectManager {
     }
 
     importProject(projectData) {
+        this.logger.debug(`Importing project`);
         const project = JSON.parse(projectData);
         
         // Check if a project with the same ID already exists
@@ -127,12 +139,14 @@ export class ProjectManager {
     resolveImportConflict(project, action) {
         switch (action) {
             case 'overwrite':
+                this.logger.debug(`Overwriting project during import: ${project.id}`);
                 this.saveProject(project);
                 this.openProject(project.id);
                 break;
             case 'create-copy':
                 project.id = uuidv4();
                 project.name = `${project.name} (Copy)`;
+                this.logger.debug(`Creating a copy of project during import: ${project.id}`);
                 this.saveProject(project);
                 this.openProject(project.id);
                 break;
@@ -142,12 +156,12 @@ export class ProjectManager {
         return true;
     }
 
-    // File management methods
     getSelectedFileId() {
         return this.selectedProject?.selectedFile;
     }
 
     setSelectedFile(fileId) {
+        this.logger.debug(`Setting selected file: ${fileId}`);
         if (!this.selectedProject) return;
         
         this.selectedProject.selectedFile = fileId;
@@ -155,6 +169,7 @@ export class ProjectManager {
     }
 
     createFile(name, content = null) {
+        this.logger.debug(`Creating file: ${name}`);
         if (!this.selectedProject) return null;
         
         content = content || this.templateManager.getDefaultContent();
@@ -165,6 +180,7 @@ export class ProjectManager {
     }
 
     openFile(id) {
+        this.logger.debug(`Opening file: ${id}`);
         if (!this.selectedProject) return null;
         
         // Reload before opening in case another editor has the project open
@@ -178,6 +194,7 @@ export class ProjectManager {
     }
 
     saveFile(file) {
+        this.logger.debug(`Saving file: ${file.name}`);
         if (!this.selectedProject) return false;
         
         // Reload before saving in case another editor has the project open
@@ -190,18 +207,21 @@ export class ProjectManager {
     }
 
     getFiles() {
+        this.logger.debug(`Getting all files`);
         if (!this.selectedProject) return [];
         
         return Object.values(this.selectedProject.diagrams).sort((a, b) => a.name.localeCompare(b.name));
     }
 
     getFile(id) {
+        this.logger.debug(`Getting file: ${id}`);
         if (!this.selectedProject) return null;
         
         return this.selectedProject.diagrams[id];
     }
 
     getFileFromStorage(id) {
+        this.logger.debug(`Getting file from storage: ${id}`);
         if (!this.selectedProject) return null;
         
         const project = this.getProject(this.selectedProject.id);
@@ -209,6 +229,7 @@ export class ProjectManager {
     }
 
     deleteFile(fileId = null) {
+        this.logger.debug(`Deleting file: ${fileId}`);
         if (!this.selectedProject) return false;
         
         fileId = fileId || this.getSelectedFileId();
@@ -228,6 +249,7 @@ export class ProjectManager {
     }
 
     renameFile(fileId, newName) {
+        this.logger.debug(`Renaming file to: ${newName}`);
         if (!this.selectedProject) return false;
         
         const file = this.getFile(fileId);
@@ -239,6 +261,7 @@ export class ProjectManager {
     }
 
     duplicateFile(fileId, newName) {
+        this.logger.debug(`Duplicating file to: ${newName}`);
         if (!this.selectedProject) return null;
         
         const file = this.getFile(fileId);
@@ -251,6 +274,7 @@ export class ProjectManager {
     }
 
     checkVersionConflict(fileId) {
+        this.logger.debug(`Checking version conflict for file: ${fileId}`);
         const file = this.getFile(fileId);
         const fileInStorage = this.getFileFromStorage(fileId);
         
@@ -284,7 +308,6 @@ export class ProjectManager {
         }
     }
 
-    // Theme management
     setTheme(theme) {
         if (!this.selectedProject) return false;
         
@@ -302,7 +325,9 @@ export class ProjectManager {
     }
 
     openLastSelectedProject() {
+        this.logger.debug('Opening last selected project');
         const selectedProjectId = localStorage.getItem('selectedProject');
+        this.logger.debug(`Last selected project ID: ${selectedProjectId}`);
         if (selectedProjectId) {
             const project = this.getProject(selectedProjectId);
             if (project) {

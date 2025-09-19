@@ -2,7 +2,8 @@
  * ViewportManager - Handles zoom, pan, and layout management
  */
 export class ViewportManager {
-    constructor() {
+    constructor(logger) {
+        this.logger = logger;
         this.scale = 1;
         this.translateX = 0;
         this.translateY = 0;
@@ -94,22 +95,25 @@ export class ViewportManager {
     }
 
     resetZoom() {
+        this.logger.debug(`Resetting zoom`);
         this.translateX = 0;
         this.translateY = 0;
         
         var wScale = this.previewWrapper.clientWidth / this.preview.clientWidth;
         var hScale = this.previewWrapper.clientHeight / this.preview.clientHeight;
         this.scale = Math.min(wScale, hScale);
+        this.logger.debug(`Scale: ${this.scale}`);
         if (wScale > hScale) {
-            // Diagram is tall, center horizontally
+            this.logger.debug(`Diagram is tall, center horizontally`);
             this.translateX = (this.previewWrapper.clientWidth - this.preview.clientWidth * this.scale) / 2;
         }
         else {
-            // Diagram is wide, center vertically
+            this.logger.debug(`Diagram is wide, center vertically`);
             this.translateY = (this.previewWrapper.clientHeight - this.preview.clientHeight * this.scale) / 2;
         }
 
         this.updateTransform();
+        this.logger.debug(`Done resetting zoom`);
     }
 
     initializeResize() {

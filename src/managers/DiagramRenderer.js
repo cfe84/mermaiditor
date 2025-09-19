@@ -2,7 +2,8 @@
  * DiagramRenderer - Handles Mermaid diagram rendering and theme management
  */
 export class DiagramRenderer {
-    constructor(mermaid) {
+    constructor(logger, mermaid) {
+        this.logger = logger;
         this.mermaid = mermaid;
         this.preview = document.getElementById('preview');
         this.consoleElt = document.getElementById('console');
@@ -11,6 +12,7 @@ export class DiagramRenderer {
     }
 
     initializeMermaid() {
+        this.logger.debug('Initializing Mermaid');
         this.mermaid.initialize({ 
             startOnLoad: false,
             theme: 'default'
@@ -18,6 +20,7 @@ export class DiagramRenderer {
     }
 
     async renderDiagram(code) {
+        this.logger.debug('Rendering diagram');
         try {
             // Parse first to catch syntax errors
             await this.mermaid.parse(code, { suppressErrors: false });
@@ -31,6 +34,7 @@ export class DiagramRenderer {
             const { svg } = await this.mermaid.render("rendered", code);
             
             if (svg) {
+                this.logger.debug('Diagram rendered successfully, displaying SVG');
                 this.preview.innerHTML = svg;
                 
                 // Ensure the SVG has proper styling for responsive scaling
@@ -52,16 +56,21 @@ export class DiagramRenderer {
                         });
                     }
                 }
+            } else {
+                this.logger.error('Mermaid render returned no SVG');
+                return { success: false, error: 'No SVG output' };
             }
             
             return { success: true, svg };
         } catch (err) {
+            this.logger.error('Error rendering diagram:', err);
             this.showError(err.toString());
             return { success: false, error: err };
         }
     }
 
     setTheme(theme) {
+        this.logger.debug(`Setting theme to: ${theme}`);
         this.mermaid.initialize({ 
             startOnLoad: false,
             theme: theme || 'default'
@@ -69,14 +78,17 @@ export class DiagramRenderer {
     }
 
     showError(errorMessage) {
+        this.logger.error(`Showing error: ${errorMessage}`);
         this.consoleElt.innerHTML = errorMessage.replace(/\n/g, '<br/>');
     }
 
     clearConsole() {
+        this.logger.debug('Clearing console');
         this.consoleElt.innerText = '';
     }
 
     setOnLoadedCallback(callback) {
+        this.logger.debug('Setting onLoaded callback');
         this.onLoadedCallback = callback;
     }
 

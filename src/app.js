@@ -9,6 +9,7 @@ import { EditorManager } from './managers/EditorManager.js';
 import { DiagramRenderer } from './managers/DiagramRenderer.js';
 import { ExportManager } from './managers/ExportManager.js';
 import { ViewportManager } from './managers/ViewportManager.js';
+import { Logger } from './Logger.js';
 
 class MermaiditorApp {
     constructor() {
@@ -19,18 +20,11 @@ class MermaiditorApp {
     async initialize() {
         try {
             // Initialize managers in dependency order
-            this.managers.template = new TemplateManager();
-            this.managers.project = new ProjectManager(this.managers.template);
-            this.managers.viewport = new ViewportManager();
-            this.managers.renderer = new DiagramRenderer(mermaid);
-            this.managers.export = new ExportManager(this.managers.viewport);
-            this.managers.editor = new EditorManager(this.managers.project);
-            this.managers.ui = new UIManager(this.managers.project, this.managers.template, this.managers.viewport);
+            this.logger = new Logger(Logger.LogLevel.DEBUG);
+            this.logger.info(`Initializing Mermaiditor`);
 
-            // Wire up the interactions between managers
+            this.loadDependencies();
             this.setupManagerInteractions();
-
-            // Open the last selected project or create default
             this.managers.project.openLastSelectedProject();
 
             // Initialize the UI
@@ -42,20 +36,8 @@ class MermaiditorApp {
             const currentTheme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(currentTheme);
 
-            // Load the current file in the editor
+            // Load the last opened file
             await this.loadCurrentFile();
-
-            // After loading the file, render the initial diagram (like original code does)
-            const content = this.managers.editor.getContent();
-            if (content) {
-                // Set up callback for initial zoom reset
-                this.managers.renderer.setOnLoadedCallback(() => {
-                    this.managers.viewport.resetZoom();
-                });
-                window.onload = () => {
-                    this.managers.renderer.renderDiagram(content);
-                };
-            }
 
             // Check for shared projects in URL
             setTimeout(() => {
@@ -70,7 +52,19 @@ class MermaiditorApp {
         }
     }
 
+    loadDependencies() {
+            this.logger.debug(`Loading dependencies`);
+            this.managers.template = new TemplateManager();
+            this.managers.project = new ProjectManager(this.logger, this.managers.template);
+            this.managers.viewport = new ViewportManager(this.logger);
+            this.managers.renderer = new DiagramRenderer(this.logger,mermaid);
+            this.managers.export = new ExportManager(this.managers.viewport);
+            this.managers.editor = new EditorManager(this.managers.project);
+            this.managers.ui = new UIManager(this.managers.project, this.managers.template, this.managers.viewport);
+    }
+
     setupManagerInteractions() {
+        this.logger.debug(`Setting up manager interactions`);
         // Editor changes trigger diagram rendering (like original onChangeAsync)
         this.managers.editor.setOnChangeCallback(async () => {
             const content = this.managers.editor.getContent();
@@ -88,6 +82,10 @@ class MermaiditorApp {
 
         this.managers.ui.setThemeChangeCallback((theme) => {
             this.onThemeChanged(theme);
+        });
+
+        this.managers.renderer.setOnLoadedCallback(() => {
+            this.managers.viewport.resetZoom();
         });
     }
 
@@ -108,7 +106,7 @@ class MermaiditorApp {
             const currentTheme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(currentTheme);
             
-            // Set up zoom reset callback BEFORE loading file (like original: onloaded = resetZoom)
+            // Set up zoom reset callback BEFORE loading file
             this.managers.renderer.setOnLoadedCallback(() => {
                 this.managers.viewport.resetZoom();
             });
