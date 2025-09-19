@@ -19,7 +19,6 @@ class MermaiditorApp {
 
     async initialize() {
         try {
-            // Initialize managers in dependency order
             this.logger = new Logger(Logger.LogLevel.DEBUG);
             this.logger.info(`Initializing Mermaiditor`);
 
@@ -32,7 +31,6 @@ class MermaiditorApp {
             this.managers.ui.loadFiles();
             this.managers.ui.loadThemes();
 
-            // Set initial theme from current project
             const currentTheme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(currentTheme);
 
@@ -65,25 +63,20 @@ class MermaiditorApp {
 
     setupManagerInteractions() {
         this.logger.debug(`Setting up manager interactions`);
-        // Editor changes trigger diagram rendering (like original onChangeAsync)
+        // Editor changes trigger diagram rendering
         this.managers.editor.setOnChangeCallback(async () => {
             const content = this.managers.editor.getContent();
             await this.managers.renderer.renderDiagram(content);
         });
-
-        // UI callbacks for project/file/theme changes
         this.managers.ui.setProjectChangeCallback((project) => {
             this.onProjectChanged(project);
         });
-
         this.managers.ui.setFileChangeCallback((file) => {
             this.onFileChanged(file);
         });
-
         this.managers.ui.setThemeChangeCallback((theme) => {
             this.onThemeChanged(theme);
         });
-
         this.managers.renderer.setOnLoadedCallback(() => {
             this.managers.viewport.resetZoom();
         });
@@ -91,37 +84,22 @@ class MermaiditorApp {
 
     async onProjectChanged(project) {
         if (project) {
-            // Set theme for renderer
             const theme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(theme);
-            
-            // Load the current file
             this.loadCurrentFile();
         }
     }
 
     async onFileChanged(file) {
         if (file) {
-            // Ensure the current theme is applied before rendering
             const currentTheme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(currentTheme);
-            
-            // Set up zoom reset callback BEFORE loading file
-            this.managers.renderer.setOnLoadedCallback(() => {
-                this.managers.viewport.resetZoom();
-            });
-            
-            // Load file content into editor - this will trigger editor change event
-            // which will render the diagram and call our zoom callback
             this.managers.editor.loadFile(file);
         }
     }
 
     async onThemeChanged(theme) {
-        // Update renderer theme
         this.managers.renderer.setTheme(theme);
-        
-        // Re-render current diagram with new theme
         const content = this.managers.editor.getContent();
         if (content) {
             await this.managers.renderer.renderDiagram(content);

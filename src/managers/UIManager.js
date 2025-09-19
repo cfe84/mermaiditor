@@ -343,7 +343,7 @@ export class UIManager {
     showImportProjectDialog() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json';
+        input.accept = '.mmd,.json';
         input.onchange = (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -373,8 +373,8 @@ export class UIManager {
         
         const project = this.projectManager.getSelectedProject();
         const a = document.createElement('a');
-        a.href = 'data:application/json,' + encodeURIComponent(projectData);
-        a.download = project.name + '.json';
+        a.href = 'data:application/mermaid,' + encodeURIComponent(projectData);
+        a.download = project.name + '.mmd';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
