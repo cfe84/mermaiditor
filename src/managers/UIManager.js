@@ -64,8 +64,8 @@ export class UIManager {
     }
 
     // Project selector management
-    loadProjects() {
-        const projects = this.projectManager.getProjects();
+    async loadProjects() {
+        const projects = await this.projectManager.getProjects();
         const selectedProject = this.projectManager.getSelectedProject();
         
         this.elements.projectSelector.innerHTML = '';
@@ -106,44 +106,44 @@ export class UIManager {
         });
     }
 
-    handleProjectSelectorChange() {
+    async handleProjectSelectorChange() {
         const selected = this.elements.projectSelector.value;
         
         switch (selected) {
             case 'create':
-                this.showCreateProjectDialog();
+                await this.showCreateProjectDialog();
                 break;
             case 'import':
                 this.showImportProjectDialog();
                 break;
             case 'export':
-                this.exportProject();
+                await this.exportProject();
                 break;
             case 'share':
-                this.showShareProjectDialog();
+                await this.showShareProjectDialog();
                 break;
             case 'duplicate':
-                this.showDuplicateProjectDialog();
+                await this.showDuplicateProjectDialog();
                 break;
             case 'rename':
-                this.showRenameProjectDialog();
+                await this.showRenameProjectDialog();
                 break;
             case 'delete':
-                this.showDeleteProjectDialog();
+                await this.showDeleteProjectDialog();
                 break;
             default:
                 if (selected !== this.projectManager.getSelectedProject()?.id) {
-                    this.projectManager.openProject(selected);
+                    await this.projectManager.openProject(selected);
                     this.onProjectChanged();
                 }
         }
         
-        this.loadProjects(); // Refresh the dropdown
+        await this.loadProjects(); // Refresh the dropdown
     }
 
     // File selector management
-    loadFiles() {
-        const files = this.projectManager.getFiles();
+    async loadFiles() {
+        const files = await this.projectManager.getFiles();
         const selectedFileId = this.projectManager.getSelectedFileId();
         
         this.elements.fileSelector.innerHTML = '';
@@ -189,7 +189,7 @@ export class UIManager {
         });
     }
 
-    handleFileSelectorChange() {
+    async handleFileSelectorChange() {
         const selectedFileId = this.elements.fileSelector.value;
         
         switch (selectedFileId) {
@@ -207,14 +207,14 @@ export class UIManager {
                 break;
             default:
                 if (selectedFileId !== this.projectManager.getSelectedFileId()) {
-                    const file = this.projectManager.openFile(selectedFileId);
+                    const file = await this.projectManager.openFile(selectedFileId);
                     if (file) {
                         this.onFileChanged(file);
                     }
                 }
         }
         
-        this.loadFiles(); // Refresh the dropdown
+        await this.loadFiles(); // Refresh the dropdown
     }
 
     // Theme management
@@ -233,9 +233,9 @@ export class UIManager {
         });
     }
 
-    handleThemeChange() {
+    async handleThemeChange() {
         const theme = this.elements.themeSelector.value;
-        this.projectManager.setTheme(theme);
+        await this.projectManager.setTheme(theme);
         if (this.onThemeChanged) {
             this.onThemeChanged(theme);
         }
@@ -257,26 +257,26 @@ export class UIManager {
         this.elements.addDiagramDialog.style.display = 'flex';
     }
 
-    handleAddDiagramOk() {
+    async handleAddDiagramOk() {
         const name = this.elements.diagramName.value.trim();
         const template = this.elements.diagramTemplate.value;
         
         if (name) {
             const content = this.templateManager.getTemplate(template);
-            const file = this.projectManager.createFile(name, content);
+            const file = await this.projectManager.createFile(name, content);
             this.elements.addDiagramDialog.style.display = 'none';
             
             if (file) {
                 this.onFileChanged(file);
             }
-            this.loadFiles();
+            await this.loadFiles();
             this.showNotification('Diagram created successfully!');
         }
     }
 
-    handleAddDiagramCancel() {
+    async handleAddDiagramCancel() {
         this.elements.addDiagramDialog.style.display = 'none';
-        this.loadFiles();
+        await this.loadFiles();
     }
 
     showImportConflictDialog(project, existingProject) {
@@ -286,9 +286,9 @@ export class UIManager {
         this.elements.importConflictDialog.style.display = 'flex';
     }
 
-    handleImportOverwrite() {
+    async handleImportOverwrite() {
         if (this.pendingImportProject) {
-            this.projectManager.resolveImportConflict(this.pendingImportProject, 'overwrite');
+            await this.projectManager.resolveImportConflict(this.pendingImportProject, 'overwrite');
             this.elements.importConflictDialog.style.display = 'none';
             this.onProjectChanged();
             this.showNotification('Project overwritten successfully!');
@@ -296,9 +296,9 @@ export class UIManager {
         }
     }
 
-    handleImportNewCopy() {
+    async handleImportNewCopy() {
         if (this.pendingImportProject) {
-            this.projectManager.resolveImportConflict(this.pendingImportProject, 'create-copy');
+            await this.projectManager.resolveImportConflict(this.pendingImportProject, 'create-copy');
             this.elements.importConflictDialog.style.display = 'none';
             this.onProjectChanged();
             this.showNotification('Project imported as a copy!');
@@ -311,8 +311,8 @@ export class UIManager {
         this.cleanupUrlParams();
     }
 
-    showShareProjectDialog() {
-        const sharedUrl = this.projectManager.generateShareUrl();
+    async showShareProjectDialog() {
+        const sharedUrl = await this.projectManager.generateShareUrl();
         if (!sharedUrl) return;
         
         this.elements.shareUrlInput.value = sharedUrl;
@@ -325,16 +325,16 @@ export class UIManager {
         this.showNotification('URL copied to clipboard!');
     }
 
-    handleShareUrlClose() {
+    async handleShareUrlClose() {
         this.elements.shareUrlDialog.style.display = 'none';
-        this.loadProjects();
+        await this.loadProjects();
     }
 
     // Project management dialogs
-    showCreateProjectDialog() {
+    async showCreateProjectDialog() {
         const name = prompt('Project name');
         if (name) {
-            this.projectManager.createProject(name);
+            await this.projectManager.createProject(name);
             this.onProjectChanged();
             this.showNotification('Project created successfully!');
         }
@@ -349,9 +349,9 @@ export class UIManager {
             if (!file) return;
             
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
-                    const result = this.projectManager.importProject(e.target.result);
+                    const result = await this.projectManager.importProject(e.target.result);
                     if (result.conflict) {
                         this.showImportConflictDialog(result.project, result.existingProject);
                     } else {
@@ -367,11 +367,11 @@ export class UIManager {
         input.click();
     }
 
-    exportProject() {
-        const projectData = this.projectManager.exportProject();
+    async exportProject() {
+        const projectData = await this.projectManager.exportProject();
         if (!projectData) return;
         
-        const project = this.projectManager.getSelectedProject();
+        const project = await this.projectManager.getSelectedProjectMetadata();
         const a = document.createElement('a');
         a.href = 'data:application/mermaid,' + encodeURIComponent(projectData);
         a.download = project.name + '.mmd';
@@ -381,84 +381,85 @@ export class UIManager {
         this.showNotification('Project exported successfully!');
     }
 
-    showDuplicateProjectDialog() {
-        const currentProject = this.projectManager.getSelectedProject();
+    async showDuplicateProjectDialog() {
+        const currentProject = await this.projectManager.getSelectedProjectMetadata();
         if (!currentProject) return;
+        const project = this.projectManager
         
         const name = prompt(`New project name for "${currentProject.name}"?`, currentProject.name);
         if (name) {
-            this.projectManager.duplicateProject(name);
+            await this.projectManager.duplicateProject(name);
             this.onProjectChanged();
             this.showNotification('Project duplicated successfully!');
         }
     }
 
-    showRenameProjectDialog() {
-        const currentProject = this.projectManager.getSelectedProject();
+    async showRenameProjectDialog() {
+        const currentProject = await this.projectManager.getSelectedProjectMetadata();
         if (!currentProject) return;
         
         const newName = prompt(`New project name for "${currentProject.name}"?`, currentProject.name);
         if (newName) {
-            this.projectManager.renameProject(newName);
-            this.loadProjects();
+            await this.projectManager.renameProject(newName);
+            await this.loadProjects();
             this.showNotification('Project renamed successfully!');
         }
     }
 
-    showDeleteProjectDialog() {
-        const currentProject = this.projectManager.getSelectedProject();
+    async showDeleteProjectDialog() {
+        const currentProject = this.projectManager.getSelectedProjectMetadata();
         if (!currentProject) return;
         
         const confirmed = confirm(`Are you sure you want to delete "${currentProject.name}"?`);
         if (confirmed) {
-            this.projectManager.deleteProject();
+            await this.projectManager.deleteProject();
             this.onProjectChanged();
             this.showNotification('Project deleted successfully!');
         }
     }
 
     // File management dialogs
-    showDeleteFileDialog() {
+    async showDeleteFileDialog() {
         const fileId = this.projectManager.getSelectedFileId();
         if (!fileId) return;
         
-        const file = this.projectManager.getFile(fileId);
+        const file = await this.projectManager.getFile(fileId);
         const confirmed = confirm(`Are you sure you want to delete "${file.name}"?`);
         if (confirmed) {
-            const newFile = this.projectManager.deleteFile(fileId);
+            const newFile = await this.projectManager.deleteFile(fileId);
             if (newFile) {
                 this.onFileChanged(newFile);
             }
-            this.loadFiles();
+            await this.loadFiles();
             this.showNotification('Diagram deleted successfully!');
         }
     }
 
-    showRenameFileDialog() {
+    async showRenameFileDialog() {
         const fileId = this.projectManager.getSelectedFileId();
         if (!fileId) return;
         
-        const file = this.projectManager.getFile(fileId);
+        const file = await this.projectManager.getFile(fileId);
         const newName = prompt(`New diagram name for "${file.name}"?`, file.name);
         if (newName) {
-            this.projectManager.renameFile(fileId, newName);
-            this.loadFiles();
+            await this.projectManager.renameFile(fileId, newName);
+            await this.loadFiles();
             this.showNotification('Diagram renamed successfully!');
         }
     }
 
-    showDuplicateFileDialog() {
+    async showDuplicateFileDialog() {
         const fileId = this.projectManager.getSelectedFileId();
         if (!fileId) return;
         
-        const file = this.projectManager.getFile(fileId);
+        const file = await this.projectManager.getFile(fileId);
         const newName = prompt(`New diagram name for "${file.name}"?`, file.name);
         if (newName) {
-            const newFile = this.projectManager.duplicateFile(fileId, newName);
+            const newFile = await this.projectManager.duplicateFile(fileId, newName);
             if (newFile) {
                 this.onFileChanged(newFile);
             }
-            this.loadFiles();
+            await this.loadFiles();
             this.showNotification('Diagram duplicated successfully!');
         }
     }
@@ -487,13 +488,13 @@ export class UIManager {
     }
 
     // URL sharing support
-    checkForSharedProject() {
+    async checkForSharedProject() {
         const params = new URLSearchParams(window.location.search);
         const projectData = params.get('project');
         
         if (projectData) {
             try {
-                const result = this.projectManager.importFromUrl(projectData);
+                const result = await this.projectManager.importFromUrl(projectData);
                 if (result.conflict) {
                     this.showImportConflictDialog(result.project, result.existingProject);
                 } else {
@@ -510,9 +511,9 @@ export class UIManager {
     }
 
     // Event handlers that can be overridden
-    onProjectChanged() {
-        this.loadProjects();
-        this.loadFiles();
+    async onProjectChanged() {
+        await this.loadProjects();
+        await this.loadFiles();
         this.loadThemes();
         
         if (this.projectChangeCallback) {

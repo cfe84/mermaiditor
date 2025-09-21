@@ -23,12 +23,16 @@ class MermaiditorApp {
             this.logger.info(`Initializing Mermaiditor`);
 
             this.loadDependencies();
+            
+            // Initialize ProjectManager (this will run migrations if needed)
+            await this.managers.project.initialize();
+            
             this.setupManagerInteractions();
-            this.managers.project.openLastSelectedProject();
+            
+            await this.managers.project.openLastSelectedProject();
 
-            // Initialize the UI
-            this.managers.ui.loadProjects();
-            this.managers.ui.loadFiles();
+            await this.managers.ui.loadProjects();
+            await this.managers.ui.loadFiles();
             this.managers.ui.loadThemes();
 
             const currentTheme = this.managers.project.getTheme();
@@ -38,8 +42,8 @@ class MermaiditorApp {
             await this.loadCurrentFile();
 
             // Check for shared projects in URL
-            setTimeout(() => {
-                this.managers.ui.checkForSharedProject();
+            setTimeout(async () => {
+                await this.managers.ui.checkForSharedProject();
             }, 500);
 
             this.isInitialized = true;
@@ -53,9 +57,9 @@ class MermaiditorApp {
     loadDependencies() {
             this.logger.debug(`Loading dependencies`);
             this.managers.template = new TemplateManager();
-            this.managers.project = new ProjectManager(this.logger, this.managers.template);
-            this.managers.viewport = new ViewportManager(this.logger);
-            this.managers.renderer = new DiagramRenderer(this.logger,mermaid);
+            this.managers.project = new ProjectManager(this.logger.withContext('ProjectManager'), this.managers.template);
+            this.managers.viewport = new ViewportManager(this.logger.withContext('ViewportManager'));
+            this.managers.renderer = new DiagramRenderer(this.logger.withContext('DiagramRenderer'),mermaid);
             this.managers.export = new ExportManager(this.managers.viewport);
             this.managers.editor = new EditorManager(this.managers.project);
             this.managers.ui = new UIManager(this.managers.project, this.managers.template, this.managers.viewport);
@@ -86,7 +90,7 @@ class MermaiditorApp {
         if (project) {
             const theme = this.managers.project.getTheme();
             this.managers.renderer.setTheme(theme);
-            this.loadCurrentFile();
+            await this.loadCurrentFile();
         }
     }
 
@@ -109,15 +113,15 @@ class MermaiditorApp {
     async loadCurrentFile() {
         const fileId = this.managers.project.getSelectedFileId();
         if (fileId) {
-            const file = this.managers.project.openFile(fileId);
+            const file = await this.managers.project.openFile(fileId);
             if (file) {
                 await this.onFileChanged(file);
             }
         } else {
             // No file selected, create a default one
-            const files = this.managers.project.getFiles();
+            const files = await this.managers.project.getFiles();
             if (files.length > 0) {
-                const file = this.managers.project.openFile(files[0].id);
+                const file = await this.managers.project.openFile(files[0].id);
                 if (file) {
                     await this.onFileChanged(file);
                 }
@@ -151,9 +155,9 @@ class MermaiditorApp {
         return this.managers.project.getSelectedProject();
     }
 
-    getCurrentFile() {
+    async getCurrentFile() {
         const fileId = this.managers.project.getSelectedFileId();
-        return this.managers.project.getFile(fileId);
+        return await this.managers.project.getFile(fileId);
     }
 }
 

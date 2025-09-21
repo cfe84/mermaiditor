@@ -29,7 +29,7 @@ export class EditorManager {
         // Check for version conflicts
         const fileId = this.projectManager.getSelectedFileId();
         if (fileId) {
-            const conflict = this.projectManager.checkVersionConflict(fileId);
+            const conflict = await this.projectManager.checkVersionConflict(fileId);
             if (conflict.conflict) {
                 console.log(`Conflict detected for file ${conflict.fileName}`);
                 console.log(`Version in storage: ${conflict.storageVersion}`);
@@ -41,10 +41,10 @@ export class EditorManager {
             }
             
             // Save the file with updated content
-            const file = this.projectManager.getFile(fileId);
+            const file = await this.projectManager.getFile(fileId);
             if (file) {
                 file.content = this.editor.getValue();
-                this.projectManager.saveFile(file);
+                await this.projectManager.saveFile(file);
             }
         }
 

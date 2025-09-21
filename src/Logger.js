@@ -6,26 +6,63 @@ export class Logger {
         DEBUG: 3
     };
 
-    constructor(logLevel = Logger.LogLevel.INFO) {
+    constructor(logLevel = Logger.LogLevel.INFO, context = null) {
         this.logLevel = logLevel;
+        this.context = context;
     }
 
     setLogLevel(level) {
         this.logLevel = level;
     }
 
+    // Create a child logger with a specific context
+    withContext(context) {
+        return new Logger(this.logLevel, context);
+    }
+
     _getCallerInfo() {
+        // If we have a context, use it
+        // if (this.context) {
+        //     return this.context;
+        // }
+        
         const stack = new Error().stack;
         const stackLines = stack.split('\n');
         // Skip Error, _getCallerInfo, and the log method call
         const callerLine = stackLines[4];
         
         if (callerLine) {
-            const match = callerLine.match(/at (?:(.+?)\.)?(.+?) \(/);
+            // Try multiple patterns to handle different stack trace formats
+            let match;
+            
+            // Pattern 1: ES6 class methods (e.g., "at ProjectManager.saveFile")
+            match = callerLine.match(/at\s+([^.]+)\.([^.\s]+)\s/);
             if (match) {
-                const className = match[1] || 'Anonymous';
-                const methodName = match[2] || 'unknown';
-                return `${className}.${methodName}`;
+                return `${match[1]}.${match[2]}`;
+            }
+            
+            // Pattern 2: Function calls (e.g., "at saveFile")
+            match = callerLine.match(/at\3s+([^.\s(]+)/);
+            if (match) {
+                return `*.${match[1]}`;
+            }
+            
+            // Pattern 3: Anonymous functions or arrow functions
+            match = callerLine.match(/at\s+Object\.([^.\s(]+)/);
+            if (match) {
+                return `Object.${match[1]}`;
+            }
+
+            // Pattern 4: method@....classname
+            match = callerLine.match(/([^@]+)@(?:[^/]*\/)*([^/\\]+)\.js:(\d+)/);
+            if (match) {
+                return `${match[2]}.${match[1]}.line_${match[3]}`;
+            }
+
+            // Pattern 5: File-based pattern as fallback
+            match = callerLine.match(/([^/\\]+)\.js:(\d+)/);
+            if (match) {
+                return `${match[1]}.line_${match[2]}`;
             }
         }
         return 'unknown.unknown';
