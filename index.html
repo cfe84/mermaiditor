@@ -279,6 +279,141 @@
             text-align: center;
             margin-top: 20px;
         }
+
+        /* Create Project Dialog */
+        .dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .dialog .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .dialog .input-group {
+            margin-bottom: 15px;
+        }
+
+        .dialog label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .dialog input,
+        .dialog select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .dialog .info-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .dialog .warning-text {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .dialog .button-row {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .dialog button {
+            margin: 0 5px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .confirm {
+            background: #007bff;
+            color: white;
+        }
+
+        .cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* File System Access dialogs */
+        #filesystem-access-dialog,
+        #filesystem-reconnect-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        #filesystem-access-dialog .modal-content,
+        #filesystem-reconnect-dialog .modal-content {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        #filesystem-access-dialog h2,
+        #filesystem-reconnect-dialog h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.3em;
+        }
+        
+        #filesystem-access-dialog p,
+        #filesystem-reconnect-dialog p {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        #filesystem-access-dialog .button-row,
+        #filesystem-reconnect-dialog .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        #filesystem-access-dialog button,
+        #filesystem-reconnect-dialog button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
     </style>
     <script type="module" src="src/app.js"></script>
 </head>
@@ -304,7 +439,7 @@
                 <textarea id="editor" placeholder="Type your Mermaid chart code here..."></textarea>
             </div>
             <div id="console"></div>
-            <div id="instructions">Made by <a href="https://fev.al">Charles Feval</a>. This uses mermaid.js to render diagrams. Documentation <a href="https://mermaid.js.org/intro/">available here</a>.</div>
+            <div id="instructions">Made by <a href="https://fev.al">Charles Feval</a>. This uses mermaid.js to render diagrams. Documentation <a href="https://mermaid.js.org/intro/">available here</a>. <a href="https://github.com/cfe84/mermaiditor">Github repo for mermaiditor.</a></div>
         </div>
         <div id="split-bar"></div>
         <div id="right-bar">
@@ -315,6 +450,9 @@
                 <button class="smallBtn" id="download-btn" title="Download as PNG">
                     📥
                 </button>
+                <button class="smallBtn" id="center-btn" title="Center">
+                    🔍
+                </button>
             </div>
             <div id="preview-container">
                 <div id="preview-wrapper">
@@ -324,17 +462,23 @@
         </div>
     </div>
     <!-- Add Diagram Dialog -->
-    <div id="add-diagram-dialog">
+    <div id="add-diagram-dialog" class="dialog" >
       <div class="modal-content">
-        <h2>New Diagram</h2>
-        <label>Diagram Name:
-          <input type="text" id="diagram-name" />
-        </label>
-        <label>Template:
-          <select id="diagram-template"></select>
-        </label>
-        <button id="add-diagram-ok">OK</button>
-        <button id="add-diagram-cancel">Cancel</button>
+        <h2>Create New Diagram</h2>
+        <div class="input-group">
+          <label for="diagram-name">Diagram Name:</label>
+          <input type="text" id="diagram-name" placeholder="Enter diagram name" />
+        </div>
+        <div class="input-group">
+          <label for="diagram-template">Template:</label>
+          <select id="diagram-template">
+            <!-- Options will be populated by JavaScript -->
+          </select>
+        </div>
+        <div class="button-row">
+          <button id="add-diagram-ok" class="confirm">Create</button>
+          <button id="add-diagram-cancel" class="cancel">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -344,9 +488,9 @@
         <h2>Import Project</h2>
         <p id="import-conflict-message"></p>
         <div class="button-row">
-          <button id="import-overwrite">Overwrite</button>
-          <button id="import-new-copy">Create Copy</button>
-          <button id="import-cancel">Cancel</button>
+          <button id="import-overwrite" class="confirm">Overwrite</button>
+          <button id="import-new-copy" class="confirm">Create Copy</button>
+          <button id="import-cancel" class="cancel">Cancel</button>
         </div>
       </div>
     </div>
@@ -367,7 +511,139 @@
       </div>
     </div>
 
-    <!-- Migration test script for development/testing -->
-    <script src="migration-test.js"></script>
+    <!-- Create Project Dialog -->
+    <div id="create-project-dialog" class="dialog" style="display: none">
+      <div class="modal-content">
+        <h2>Create New Project</h2>
+        <div class="input-group">
+          <label for="create-project-name">Project Name:</label>
+          <input type="text" id="create-project-name" placeholder="Enter project name" />
+        </div>
+        <div class="input-group">
+          <label for="create-project-storage">Storage Provider:</label>
+          <select id="create-project-storage">
+            <!-- Options will be populated by JavaScript -->
+          </select>
+          <div id="storage-provider-info" class="info-text"></div>
+        </div>
+        <div id="browser-compatibility-warning" class="warning-text" style="display: none">
+          <p>⚠️ Your browser does not support working with local files. Use Chrome or any Chrome-based browser for a better experience.</p>
+        </div>
+        <div class="button-row">
+          <button id="create-project-confirm" class="confirm">Create</button>
+          <button id="create-project-cancel" class="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Duplicate Project Dialog -->
+    <div id="duplicate-project-dialog" class="dialog" style="display: none">
+      <div class="modal-content">
+        <h2>Duplicate Project</h2>
+        <div class="input-group">
+          <label for="duplicate-project-name">New Project Name:</label>
+          <input type="text" id="duplicate-project-name" placeholder="Enter new project name" />
+        </div>
+        <div class="input-group">
+          <label for="duplicate-project-storage">Storage Provider:</label>
+          <select id="duplicate-project-storage">
+            <!-- Options will be populated by JavaScript -->
+          </select>
+          <div id="duplicate-storage-provider-info" class="info-text"></div>
+        </div>
+        <div class="button-row">
+          <button id="duplicate-project-confirm" class="confirm">Duplicate</button>
+          <button id="duplicate-project-cancel" class="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Selection Dialog -->
+    <div id="project-selection-dialog" class="dialog" style="display: none">
+      <div class="modal-content">
+        <h2>📂 Select Project to Open</h2>
+        <p>Multiple Mermaiditor projects found in the selected folder. Choose which one to open:</p>
+        <div class="input-group">
+          <label for="project-selection-list">Available Projects:</label>
+          <select id="project-selection-list" size="5" style="width: 100%; height: 120px;">
+            <!-- Options will be populated by JavaScript -->
+          </select>
+        </div>
+        <div class="button-row">
+          <button id="project-selection-confirm" class="confirm">Open Selected</button>
+          <button id="project-selection-cancel" class="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filesystem Project Deletion Dialog -->
+    <div id="filesystem-deletion-dialog" class="dialog" style="display: none">
+      <div class="modal-content">
+        <h2>🗑️ Delete Filesystem Project</h2>
+        <p>This project is stored in a local folder on your computer.</p>
+        <p><strong>What would you like to do?</strong></p>
+        <div style="margin: 20px 0;">
+          <div style="margin-bottom: 10px;">
+            <input type="radio" id="delete-files-option" name="deletion-option" value="delete-files" checked>
+            <label for="delete-files-option"><strong>Delete project files from disk</strong></label>
+            <div style="margin-left: 20px; font-size: 0.9em; color: #666;">
+              This will permanently delete all project files (.mermaiditor-project.json and .mmd files) from your computer.
+            </div>
+          </div>
+          <div>
+            <input type="radio" id="remove-reference-option" name="deletion-option" value="remove-reference">
+            <label for="remove-reference-option"><strong>Remove from Mermaiditor only</strong></label>
+            <div style="margin-left: 20px; font-size: 0.9em; color: #666;">
+              The project files will remain on your computer, but won't appear in Mermaiditor anymore.
+            </div>
+          </div>
+        </div>
+        <div class="button-row">
+          <button id="filesystem-deletion-confirm" class="confirm">Delete Project</button>
+          <button id="filesystem-deletion-cancel" class="cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File System Access Dialog -->
+    <div id="filesystem-access-dialog" style="display: none">
+      <div class="modal-content">
+        <h2>📁 File System Access Required</h2>
+        <p id="filesystem-access-message">
+          You have projects stored in local folders. To access them, Mermaiditor needs permission to read and write files on your computer.
+        </p>
+        <p>
+          <strong>Why do we need this?</strong><br>
+          • Access your existing project folders<br>
+          • Save changes directly to your files<br>
+          • Keep your work synchronized across sessions
+        </p>
+        <p style="font-size: 0.9em; color: #666;">
+          <em>Note: You can always enable this later when creating or opening projects.</em>
+        </p>
+        <div class="button-row">
+          <button id="filesystem-access-allow" style="background: #28a745; color: white;">Allow Access</button>
+          <button id="filesystem-access-deny" style="background: #6c757d; color: white;">Use Browser Storage Only</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File System Reconnect Dialog -->
+    <div id="filesystem-reconnect-dialog" style="display: none">
+      <div class="modal-content">
+        <h2>🔄 Reconnect to Project Folder</h2>
+        <p id="filesystem-reconnect-message">
+          Your last project is stored in a local folder.
+        </p>
+        <p>
+          To continue working on it, please reconnect to the folder where your project files are stored.
+        </p>
+        <div class="button-row">
+          <button id="filesystem-reconnect-select" class="confirm">Select Folder</button>
+          <button id="filesystem-reconnect-cancel" class="cancel    ">Create New Project</button>
+        </div>
+      </div>
+    </div>
+
   </body>
 </html>

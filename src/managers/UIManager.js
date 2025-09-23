@@ -20,23 +20,57 @@ export class UIManager {
             addDiagramDialog: document.getElementById('add-diagram-dialog'),
             importConflictDialog: document.getElementById('import-conflict-dialog'),
             shareUrlDialog: document.getElementById('share-url-dialog'),
+            createProjectDialog: document.getElementById('create-project-dialog'),
+            duplicateProjectDialog: document.getElementById('duplicate-project-dialog'),
+            projectSelectionDialog: document.getElementById('project-selection-dialog'),
+            filesystemDeletionDialog: document.getElementById('filesystem-deletion-dialog'),
+            filesystemAccessDialog: document.getElementById('filesystem-access-dialog'),
+            filesystemReconnectDialog: document.getElementById('filesystem-reconnect-dialog'),
             // Dialog inputs
             diagramName: document.getElementById('diagram-name'),
             diagramTemplate: document.getElementById('diagram-template'),
             importConflictMessage: document.getElementById('import-conflict-message'),
             shareUrlInput: document.getElementById('share-url-input'),
+            createProjectName: document.getElementById('create-project-name'),
+            createProjectStorage: document.getElementById('create-project-storage'),
+            duplicateProjectName: document.getElementById('duplicate-project-name'),
+            duplicateProjectStorage: document.getElementById('duplicate-project-storage'),
+            projectSelectionList: document.getElementById('project-selection-list'),
+            deleteFilesOption: document.getElementById('delete-files-option'),
+            removeReferenceOption: document.getElementById('remove-reference-option'),
+            storageProviderInfo: document.getElementById('storage-provider-info'),
+            duplicateStorageProviderInfo: document.getElementById('duplicate-storage-provider-info'),
+            browserCompatibilityWarning: document.getElementById('browser-compatibility-warning'),
+            filesystemAccessMessage: document.getElementById('filesystem-access-message'),
+            filesystemReconnectMessage: document.getElementById('filesystem-reconnect-message'),
             // Buttons
             addDiagramOk: document.getElementById('add-diagram-ok'),
             addDiagramCancel: document.getElementById('add-diagram-cancel'),
+            centerButton: document.getElementById('center-btn'),
             importOverwrite: document.getElementById('import-overwrite'),
             importNewCopy: document.getElementById('import-new-copy'),
             importCancel: document.getElementById('import-cancel'),
             copyShareUrl: document.getElementById('copy-share-url'),
-            shareUrlClose: document.getElementById('share-url-close')
+            shareUrlClose: document.getElementById('share-url-close'),
+            createProjectConfirm: document.getElementById('create-project-confirm'),
+            createProjectCancel: document.getElementById('create-project-cancel'),
+            duplicateProjectConfirm: document.getElementById('duplicate-project-confirm'),
+            duplicateProjectCancel: document.getElementById('duplicate-project-cancel'),
+            projectSelectionConfirm: document.getElementById('project-selection-confirm'),
+            projectSelectionCancel: document.getElementById('project-selection-cancel'),
+            filesystemDeletionConfirm: document.getElementById('filesystem-deletion-confirm'),
+            filesystemDeletionCancel: document.getElementById('filesystem-deletion-cancel'),
+            filesystemAccessAllow: document.getElementById('filesystem-access-allow'),
+            filesystemAccessDeny: document.getElementById('filesystem-access-deny'),
+            filesystemReconnectSelect: document.getElementById('filesystem-reconnect-select'),
+            filesystemReconnectCancel: document.getElementById('filesystem-reconnect-cancel')
         };
     }
 
     setupEventListeners() {
+        // Center button
+        this.elements.centerButton.addEventListener('click', () => this.viewPortManager.resetZoom());
+
         // Project selector
         this.elements.projectSelector.onchange = () => this.handleProjectSelectorChange();
         
@@ -61,6 +95,30 @@ export class UIManager {
         // Share URL dialog
         this.elements.copyShareUrl.addEventListener('click', () => this.handleCopyShareUrl());
         this.elements.shareUrlClose.addEventListener('click', () => this.handleShareUrlClose());
+        
+        // Create Project dialog
+        this.elements.createProjectConfirm.addEventListener('click', () => this.handleCreateProjectConfirm());
+        this.elements.createProjectCancel.addEventListener('click', () => this.handleCreateProjectCancel());
+        this.elements.createProjectStorage.addEventListener('change', () => this.handleStorageProviderChange());
+        
+        // Duplicate Project dialog
+        this.elements.duplicateProjectConfirm.addEventListener('click', () => this.handleDuplicateProjectConfirm());
+        this.elements.duplicateProjectCancel.addEventListener('click', () => this.handleDuplicateProjectCancel());
+        this.elements.duplicateProjectStorage.addEventListener('change', () => this.handleDuplicateStorageProviderChange());
+        
+        // Project Selection dialog
+        this.elements.projectSelectionConfirm.addEventListener('click', () => this.handleProjectSelectionConfirm());
+        this.elements.projectSelectionCancel.addEventListener('click', () => this.handleProjectSelectionCancel());
+        
+        // Filesystem Deletion dialog
+        this.elements.filesystemDeletionConfirm.addEventListener('click', () => this.handleFilesystemDeletionConfirm());
+        this.elements.filesystemDeletionCancel.addEventListener('click', () => this.handleFilesystemDeletionCancel());
+        
+        // File System Access dialogs
+        this.elements.filesystemAccessAllow.addEventListener('click', () => this.handleFilesystemAccessAllow());
+        this.elements.filesystemAccessDeny.addEventListener('click', () => this.handleFilesystemAccessDeny());
+        this.elements.filesystemReconnectSelect.addEventListener('click', () => this.handleFilesystemReconnectSelect());
+        this.elements.filesystemReconnectCancel.addEventListener('click', () => this.handleFilesystemReconnectCancel());
     }
 
     // Project selector management
@@ -90,6 +148,7 @@ export class UIManager {
 
         const options = [
             { value: 'create', text: '--- Create new project' },
+            { value: 'open-folder', text: '--- Open folder...' },
             { value: 'import', text: '--- Import project' },
             { value: 'export', text: '--- Export this project' },
             { value: 'share', text: '--- Get Encoded URL' },
@@ -113,6 +172,9 @@ export class UIManager {
             case 'create':
                 await this.showCreateProjectDialog();
                 break;
+            case 'open-folder':
+                await this.handleOpenFolder();
+                break;
             case 'import':
                 this.showImportProjectDialog();
                 break;
@@ -133,8 +195,18 @@ export class UIManager {
                 break;
             default:
                 if (selected !== this.projectManager.getSelectedProject()?.id) {
-                    await this.projectManager.openProject(selected);
-                    this.onProjectChanged();
+                    try {
+                        await this.projectManager.openProject(selected);
+                        this.onProjectChanged();
+                    } catch (error) {
+                        if (error.message === 'FILESYSTEM_NOT_INITIALIZED') {
+                            // Set this as the pending project and show reconnect prompt
+                            this.projectManager.pendingFileSystemProject = selected;
+                            await this.showFileSystemReconnectPrompt();
+                        } else {
+                            alert('Failed to open project: ' + error.message);
+                        }
+                    }
                 }
         }
         
@@ -332,12 +404,111 @@ export class UIManager {
 
     // Project management dialogs
     async showCreateProjectDialog() {
-        const name = prompt('Project name');
-        if (name) {
-            await this.projectManager.createProject(name);
-            this.onProjectChanged();
-            this.showNotification('Project created successfully!');
+        // Populate storage provider options
+        this.populateStorageProviders();
+        
+        // Show browser compatibility warning if needed
+        this.updateBrowserCompatibilityWarning();
+        
+        // Reset form
+        this.elements.createProjectName.value = '';
+        this.elements.createProjectStorage.value = 'localStorage';
+        this.handleStorageProviderChange();
+        
+        // Show dialog
+        this.elements.createProjectDialog.style.display = 'flex';
+        this.elements.createProjectName.focus();
+    }
+
+    populateStorageProviders() {
+        const providers = this.projectManager.getAvailableStorageProviders();
+        const select = this.elements.createProjectStorage;
+        
+        select.innerHTML = '';
+        
+        providers.forEach(provider => {
+            const option = document.createElement('option');
+            option.value = provider.id;
+            option.textContent = provider.name;
+            option.disabled = !provider.supported;
+            select.appendChild(option);
+        });
+    }
+
+    updateBrowserCompatibilityWarning() {
+        const warning = this.elements.browserCompatibilityWarning;
+        const hasFileSystemSupport = this.projectManager.getStorageProvider('fileSystem') !== undefined;
+        
+        if (!hasFileSystemSupport) {
+            warning.style.display = 'block';
+        } else {
+            warning.style.display = 'none';
         }
+    }
+
+    handleStorageProviderChange() {
+        const selectedProvider = this.elements.createProjectStorage.value;
+        const infoElement = this.elements.storageProviderInfo;
+        
+        switch (selectedProvider) {
+            case 'localStorage':
+                infoElement.textContent = 'Projects will be stored in your browser\'s local storage.';
+                break;
+            case 'fileSystem':
+                infoElement.textContent = 'Projects will be stored in a local folder on your computer.';
+                break;
+            default:
+                infoElement.textContent = '';
+        }
+    }
+
+    async handleCreateProjectConfirm() {
+        const name = this.elements.createProjectName.value.trim();
+        const storageProvider = this.elements.createProjectStorage.value;
+        
+        if (!name) {
+            alert('Please enter a project name');
+            return;
+        }
+        
+        try {
+            // Initialize storage provider if needed (e.g., FileSystem needs folder selection)
+            if (storageProvider === 'fileSystem') {
+                await this.projectManager.initializeStorageProvider(storageProvider);
+            }
+            
+            // Create the project
+            await this.projectManager.createProject(name, storageProvider);
+            
+            // Close dialog and refresh
+            this.elements.createProjectDialog.style.display = 'none';
+            this.onProjectChanged();
+            this.showNotification(`Project "${name}" created successfully!`);
+        } catch (error) {
+            console.error('Failed to create project:', error);
+            
+            // Better error message handling
+            let errorMessage = 'Unknown error occurred';
+            if (error && error.message) {
+                errorMessage = error.message;
+            } else if (error && typeof error === 'string') {
+                errorMessage = error;
+            } else if (error) {
+                errorMessage = error.toString();
+            }
+            
+            if (errorMessage.includes('cancelled') || errorMessage.includes('AbortError')) {
+                // User cancelled folder selection - just close dialog
+                this.elements.createProjectDialog.style.display = 'none';
+                this.showNotification('Project creation cancelled', 'info');
+            } else {
+                this.showNotification('Failed to create project: ' + errorMessage, 'error');
+            }
+        }
+    }
+
+    handleCreateProjectCancel() {
+        this.elements.createProjectDialog.style.display = 'none';
     }
 
     showImportProjectDialog() {
@@ -384,14 +555,156 @@ export class UIManager {
     async showDuplicateProjectDialog() {
         const currentProject = await this.projectManager.getSelectedProjectMetadata();
         if (!currentProject) return;
-        const project = this.projectManager
         
-        const name = prompt(`New project name for "${currentProject.name}"?`, currentProject.name);
-        if (name) {
-            await this.projectManager.duplicateProject(name);
-            this.onProjectChanged();
-            this.showNotification('Project duplicated successfully!');
+        // Populate storage provider options
+        this.populateDuplicateStorageProviders();
+        
+        // Set default name and storage
+        this.elements.duplicateProjectName.value = `${currentProject.name} Copy`;
+        this.elements.duplicateProjectStorage.value = 'localStorage';
+        this.handleDuplicateStorageProviderChange();
+        
+        // Show dialog
+        this.elements.duplicateProjectDialog.style.display = 'flex';
+        this.elements.duplicateProjectName.focus();
+        this.elements.duplicateProjectName.select();
+    }
+
+    populateDuplicateStorageProviders() {
+        const providers = this.projectManager.getAvailableStorageProviders();
+        const select = this.elements.duplicateProjectStorage;
+        
+        select.innerHTML = '';
+        
+        providers.forEach(provider => {
+            const option = document.createElement('option');
+            option.value = provider.id;
+            option.textContent = provider.name;
+            option.disabled = !provider.supported;
+            select.appendChild(option);
+        });
+    }
+
+    handleDuplicateStorageProviderChange() {
+        const selectedProvider = this.elements.duplicateProjectStorage.value;
+        const infoElement = this.elements.duplicateStorageProviderInfo;
+        
+        switch (selectedProvider) {
+            case 'localStorage':
+                infoElement.textContent = 'Project copy will be stored in your browser\'s local storage.';
+                break;
+            case 'fileSystem':
+                infoElement.textContent = 'Project copy will be stored in a local folder on your computer.';
+                break;
+            default:
+                infoElement.textContent = '';
         }
+    }
+
+    async handleDuplicateProjectConfirm() {
+        const name = this.elements.duplicateProjectName.value.trim();
+        const storageProvider = this.elements.duplicateProjectStorage.value;
+        
+        if (!name) {
+            alert('Please enter a project name');
+            return;
+        }
+        
+        try {
+            // Initialize storage provider if needed (e.g., FileSystem needs folder selection)
+            if (storageProvider === 'fileSystem') {
+                await this.projectManager.initializeStorageProvider(storageProvider);
+            }
+            
+            // Duplicate the project
+            await this.projectManager.duplicateProject(name, storageProvider);
+            
+            // Close dialog and refresh
+            this.elements.duplicateProjectDialog.style.display = 'none';
+            this.onProjectChanged();
+            this.showNotification(`Project duplicated as "${name}" successfully!`);
+        } catch (error) {
+            console.error('Failed to duplicate project:', error);
+            if (error.message.includes('cancelled')) {
+                // User cancelled folder selection - just close dialog
+                this.elements.duplicateProjectDialog.style.display = 'none';
+            } else {
+                alert('Failed to duplicate project: ' + error.message);
+            }
+        }
+    }
+
+    handleDuplicateProjectCancel() {
+        this.elements.duplicateProjectDialog.style.display = 'none';
+    }
+
+    // Open Folder functionality
+    async handleOpenFolder() {
+        try {
+            const result = await this.projectManager.openFolder();
+            if (!result) {
+                // User cancelled
+                return;
+            }
+
+            if (result.selectedProject) {
+                // Single project was automatically opened
+                this.onProjectChanged();
+                this.showNotification(`Opened project "${result.selectedProject.name}" from folder!`);
+            } else {
+                // Multiple projects found, show selection dialog
+                this.showProjectSelectionDialog(result.allProjects, result.directoryHandle);
+            }
+        } catch (error) {
+            this.logger.error('Failed to open folder:', error);
+            alert('Failed to open folder: ' + error.message);
+        }
+    }
+
+    showProjectSelectionDialog(projects, directoryHandle) {
+        // Store for later use
+        this.pendingProjects = projects;
+        this.pendingDirectoryHandle = directoryHandle;
+        
+        // Populate project list
+        this.elements.projectSelectionList.innerHTML = '';
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = `${project.name} (${project.fileName})`;
+            this.elements.projectSelectionList.appendChild(option);
+        });
+        
+        // Show dialog
+        this.elements.projectSelectionDialog.style.display = 'flex';
+        if (projects.length > 0) {
+            this.elements.projectSelectionList.selectedIndex = 0;
+        }
+    }
+
+    async handleProjectSelectionConfirm() {
+        const selectedId = this.elements.projectSelectionList.value;
+        if (!selectedId || !this.pendingProjects) return;
+
+        try {
+            const selectedProject = this.pendingProjects.find(p => p.id === selectedId);
+            if (selectedProject) {
+                await this.projectManager.openProjectFromFolder(selectedProject, this.pendingDirectoryHandle);
+                this.onProjectChanged();
+                this.showNotification(`Opened project "${selectedProject.name}" from folder!`);
+            }
+        } catch (error) {
+            this.logger.error('Failed to open selected project:', error);
+            alert('Failed to open project: ' + error.message);
+        } finally {
+            this.handleProjectSelectionCancel();
+        }
+    }
+
+    handleProjectSelectionCancel() {
+        this.elements.projectSelectionDialog.style.display = 'none';
+        this.pendingProjects = null;
+        this.pendingDirectoryHandle = null;
     }
 
     async showRenameProjectDialog() {
@@ -407,15 +720,66 @@ export class UIManager {
     }
 
     async showDeleteProjectDialog() {
-        const currentProject = this.projectManager.getSelectedProjectMetadata();
+        const currentProject = await this.projectManager.getSelectedProjectMetadata();
         if (!currentProject) return;
         
-        const confirmed = confirm(`Are you sure you want to delete "${currentProject.name}"?`);
-        if (confirmed) {
-            await this.projectManager.deleteProject();
-            this.onProjectChanged();
-            this.showNotification('Project deleted successfully!');
+        const projectRef = this.projectManager.getSelectedProject();
+        
+        // Check if this is a filesystem project
+        if (projectRef && projectRef.storageProvider === 'fileSystem') {
+            // Show filesystem deletion dialog
+            this.showFilesystemDeletionDialog(currentProject);
+        } else {
+            // Standard confirmation for other storage providers
+            const confirmed = confirm(`Are you sure you want to delete "${currentProject.name}"?`);
+            if (confirmed) {
+                await this.projectManager.deleteProject();
+                this.onProjectChanged();
+                this.showNotification('Project deleted successfully!');
+            }
         }
+    }
+
+    showFilesystemDeletionDialog(projectMetadata) {
+        // Store project metadata for later use
+        this.pendingDeletionProject = projectMetadata;
+        
+        // Reset radio button selection to default (delete files)
+        this.elements.deleteFilesOption.checked = true;
+        this.elements.removeReferenceOption.checked = false;
+        
+        // Show dialog
+        this.elements.filesystemDeletionDialog.style.display = 'flex';
+    }
+
+    async handleFilesystemDeletionConfirm() {
+        if (!this.pendingDeletionProject) return;
+        
+        try {
+            const deleteFiles = this.elements.deleteFilesOption.checked;
+            
+            if (deleteFiles) {
+                // Delete files from disk
+                await this.projectManager.deleteProject(true); // true = delete files
+                this.showNotification('Project and files deleted successfully!');
+            } else {
+                // Remove reference only
+                await this.projectManager.deleteProject(false); // false = remove reference only
+                this.showNotification('Project removed from Mermaiditor!');
+            }
+            
+            this.onProjectChanged();
+        } catch (error) {
+            this.logger.error('Failed to delete project:', error);
+            alert('Failed to delete project: ' + error.message);
+        } finally {
+            this.handleFilesystemDeletionCancel();
+        }
+    }
+
+    handleFilesystemDeletionCancel() {
+        this.elements.filesystemDeletionDialog.style.display = 'none';
+        this.pendingDeletionProject = null;
     }
 
     // File management dialogs
@@ -570,5 +934,131 @@ export class UIManager {
             this.elements.toggleEditorBtn.title = 'Show Code Editor';
         }
         this.viewPortManager.resetZoom();
+    }
+
+    /**
+     * Show a prompt to reconnect to file system storage
+     */
+    /**
+     * Show the file system access prompt dialog
+     */
+    showFileSystemAccessPrompt() {
+        this.elements.filesystemAccessDialog.style.display = 'flex';
+    }
+
+    /**
+     * Show the file system reconnect dialog
+     */
+    showFileSystemReconnectPrompt() {
+        const pendingProject = this.projectManager.getPendingFileSystemProject();
+        if (!pendingProject) return;
+
+        const projectName = pendingProject.id;
+        this.elements.filesystemReconnectMessage.textContent = 
+            `Your last project "${projectName}" is stored in a local folder.`;
+        
+        this.elements.filesystemReconnectDialog.style.display = 'flex';
+    }
+
+    /**
+     * Handle file system access allow button
+     */
+    async handleFilesystemAccessAllow() {
+        this.elements.filesystemAccessDialog.style.display = 'none';
+        
+        try {
+            await this.projectManager.initializeStorageProvider('fileSystem');
+            
+            // Reload projects and files if file system access was granted
+            await this.loadProjects();
+            
+            // Try to open pending file system project if there was one
+            if (this.projectManager.hasPendingFileSystemProject()) {
+                try {
+                    await this.projectManager.openPendingFileSystemProject();
+                    await this.loadFiles();
+                    const currentTheme = this.projectManager.getTheme();
+                    if (window.app && window.app.managers && window.app.managers.renderer) {
+                        window.app.managers.renderer.setTheme(currentTheme);
+                    }
+                    if (window.app) {
+                        await window.app.loadCurrentFile();
+                    }
+                } catch (error) {
+                    console.error('Failed to open pending file system project:', error);
+                }
+            }
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                this.showNotification('Folder selection cancelled. You can enable file system access later by creating a new project with file system storage.', 'info');
+            } else {
+                this.showNotification('Failed to enable file system access: ' + error.message, 'error');
+            }
+        }
+    }
+
+    /**
+     * Handle file system access deny button
+     */
+    handleFilesystemAccessDeny() {
+        this.elements.filesystemAccessDialog.style.display = 'none';
+        this.showNotification('Continuing with browser storage. You can enable file system access later.', 'info');
+    }
+
+    /**
+     * Handle file system reconnect select button
+     */
+    async handleFilesystemReconnectSelect() {
+        this.elements.filesystemReconnectDialog.style.display = 'none';
+        
+        try {
+            // Initialize the file system storage provider
+            await this.projectManager.initializeStorageProvider('fileSystem');
+            
+            // Open the pending project
+            await this.projectManager.openPendingFileSystemProject();
+            
+            // Reload the UI
+            await this.loadProjects();
+            await this.loadFiles();
+            
+            // Set the theme and load the file
+            const currentTheme = this.projectManager.getTheme();
+            if (window.app && window.app.managers && window.app.managers.renderer) {
+                window.app.managers.renderer.setTheme(currentTheme);
+            }
+            
+            if (window.app) {
+                await window.app.loadCurrentFile();
+            }
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                this.showNotification('Folder selection cancelled. You can reconnect later by selecting the project.', 'info');
+            } else {
+                this.showNotification('Failed to reconnect to folder: ' + error.message, 'error');
+            }
+        }
+    }
+
+    /**
+     * Handle file system reconnect cancel button
+     */
+    handleFilesystemReconnectCancel() {
+        this.elements.filesystemReconnectDialog.style.display = 'none';
+        // Could create a new project here or just continue with existing state
+    }
+
+    /**
+     * Show a notification message (simple implementation)
+     */
+    showNotification(message, type = 'info') {
+        // For now, use console and a simple alert
+        // TODO: Implement a proper notification system
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        if (type === 'error') {
+            alert(message);
+        }
     }
 }

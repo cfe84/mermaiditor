@@ -3,9 +3,10 @@
  */
 import { uuidv4 } from '../utils/uuid.js';
 import { compressProject, decompressProject } from '../utils/compression.js';
-import { ProjectReference, Project, File } from '../models/Project.js';
+import { Project, ProjectReference, File } from '../models/Project.js';
 import { LocalStorageProvider } from '../storage/LocalStorageProvider.js';
 import { StorageMigrationManager } from './StorageMigrationManager.js';
+import { FileSystemStorageProvider } from '../storage/FileSystemStorageProvider.js';
 
 export class ProjectManager {
     constructor(logger, templateManager) {
@@ -18,6 +19,9 @@ export class ProjectManager {
         // Storage providers registry
         this.storageProviders = new Map();
         this.registerStorageProvider('localStorage', new LocalStorageProvider());
+        if (FileSystemStorageProvider.isSupported()) {
+            this.registerStorageProvider('fileSystem', new FileSystemStorageProvider(this.logger));
+        }
         
         // Initialize migration manager
         this.migrationManager = new StorageMigrationManager(logger);
@@ -65,6 +69,44 @@ export class ProjectManager {
      */
     getStorageProvider(name) {
         return this.storageProviders.get(name);
+    }
+
+    /**
+     * Get available storage providers for UI display
+     */
+    getAvailableStorageProviders() {
+        const providers = [];
+        for (const [id, provider] of this.storageProviders) {
+            providers.push({
+                id,
+                name: provider.getDisplayName ? provider.getDisplayName() : id,
+                supported: true
+            });
+        }
+        return providers;
+    }
+
+    /**
+     * Initialize a storage provider manually (for UI-triggered initialization)
+     */
+    async initializeStorageProvider(providerId) {
+        const provider = this.storageProviders.get(providerId);
+        if (!provider) {
+            throw new Error(`Storage provider not found: ${providerId}`);
+        }
+
+        if (provider.initialize) {
+            try {
+                await provider.initialize();
+                this.logger.info(`Manually initialized storage provider: ${providerId}`);
+                return true;
+            } catch (error) {
+                this.logger.error(`Failed to initialize storage provider ${providerId}:`, error);
+                throw error;
+            }
+        }
+        
+        return true; // Already initialized or doesn't need initialization
     }
 
     /**
@@ -118,6 +160,67 @@ export class ProjectManager {
             }
             return a.id.localeCompare(b.id);
         });
+    }
+
+    /**
+     * Get all accessible project references (filters out projects that can't be opened)
+     */
+    async getAccessibleProjectReferences() {
+        this.logger.debug('Getting accessible project references');
+        const allReferences = this.getProjectReferences();
+        const accessibleReferences = [];
+
+        for (const ref of allReferences) {
+            try {
+                const provider = this.storageProviders.get(ref.storageProvider);
+                if (!provider) {
+                    this.logger.warn(`Storage provider not found for project ${ref.id}: ${ref.storageProvider}`);
+                    continue;
+                }
+
+                // For filesystem projects, check if we can get metadata (which requires directory handle)
+                if (ref.storageProvider === 'fileSystem') {
+                    const metadata = await provider.getProjectMetadata(ref.id);
+                    if (!metadata) {
+                        this.logger.warn(`Cannot access filesystem project ${ref.id}: no directory handle`);
+                        continue;
+                    }
+                }
+
+                accessibleReferences.push(ref);
+            } catch (error) {
+                this.logger.warn(`Project ${ref.id} not accessible: ${error.message}`);
+            }
+        }
+
+        this.logger.debug(`Found ${accessibleReferences.length} accessible project references out of ${allReferences.length} total`);
+        return accessibleReferences;
+    }
+
+    /**
+     * Clean up orphaned project references (projects that can no longer be accessed)
+     */
+    async cleanupOrphanedReferences() {
+        this.logger.debug('Cleaning up orphaned project references');
+        const allReferences = this.getProjectReferences();
+        const accessibleReferences = await this.getAccessibleProjectReferences();
+        
+        const accessibleIds = new Set(accessibleReferences.map(ref => ref.id));
+        let cleanedCount = 0;
+
+        for (const ref of allReferences) {
+            if (!accessibleIds.has(ref.id)) {
+                this.logger.info(`Removing orphaned project reference: ${ref.id}`);
+                this._deleteProjectReference(ref.id);
+                cleanedCount++;
+            }
+        }
+
+        if (cleanedCount > 0) {
+            this.logger.info(`Cleaned up ${cleanedCount} orphaned project references`);
+        }
+
+        return cleanedCount;
     }
 
     async createProject(name, storageProviderName = 'localStorage', storageProviderParameters = {}) {
@@ -232,23 +335,36 @@ export class ProjectManager {
         return projectMetadata;
     }
 
-    async deleteProject() {
-        this.logger.debug(`Deleting project: ${this.selectedProjectReference?.id}`);
+    async deleteProject(deleteFiles = true) {
+        this.logger.debug(`Deleting project: ${this.selectedProjectReference?.id}, deleteFiles: ${deleteFiles}`);
         if (!this.selectedProjectReference || !this.currentStorageProvider) return false;
         
         const projectId = this.selectedProjectReference.id;
+        const isFilesystemProject = this.selectedProjectReference.storageProvider === 'fileSystem';
         
-        // Delete from storage
-        await this.currentStorageProvider.deleteProject(projectId);
+        if (isFilesystemProject && deleteFiles) {
+            // Delete actual files from disk
+            await this.currentStorageProvider.deleteProjectFiles(projectId);
+        } else if (!isFilesystemProject) {
+            // For non-filesystem projects, always delete from storage
+            await this.currentStorageProvider.deleteProject(projectId);
+        }
         
-        // Delete reference
+        // Always delete the project reference from localStorage
         this._deleteProjectReference(projectId);
         
+        // Clear current selection to avoid referencing deleted project
+        this.selectedProjectReference = null;
+        this.currentStorageProvider = null;
+        localStorage.removeItem('selectedProjectReference');
+        
         // Open another project
-        const references = this.getProjectReferences();
-        if (references.length > 0) {
-            await this.openProject(references[0].id);
+        const accessibleReferences = await this.getAccessibleProjectReferences();
+        if (accessibleReferences.length > 0) {
+            // Open the first accessible project
+            await this.openProject(accessibleReferences[0].id);
         } else {
+            // No accessible projects, create a default one
             await this.createProject('Default');
         }
         
@@ -267,34 +383,76 @@ export class ProjectManager {
         return success;
     }
 
-    async duplicateProject(newName) {
-        this.logger.debug(`Duplicating project to: ${newName}`);
+    async duplicateProject(newName, targetStorageProvider = null) {
+        this.logger.debug(`Duplicating project to: ${newName} with storage: ${targetStorageProvider || 'same as source'}`);
         if (!this.selectedProjectReference || !this.currentStorageProvider) return false;
         
         const newProjectId = uuidv4();
         
-        // Duplicate in storage
-        const success = await this.currentStorageProvider.duplicateProject(
-            this.selectedProjectReference.id,
-            newProjectId,
-            newName
-        );
+        // Determine target storage provider
+        const targetProvider = targetStorageProvider || this.selectedProjectReference.storageProvider;
+        const targetStorageProviderInstance = this.getStorageProvider(targetProvider);
         
-        if (!success) return false;
+        if (!targetStorageProviderInstance) {
+            throw new Error(`Target storage provider '${targetProvider}' not available`);
+        }
         
-        // Create new project reference
+        // Get source project data
+        const sourceProjectData = await this.exportProject();
+        if (!sourceProjectData) {
+            throw new Error('Failed to export source project data');
+        }
+        
+        const parsedData = JSON.parse(sourceProjectData);
+        this.logger.debug(`Duplicating project: source has ${Array.isArray(parsedData.files) ? parsedData.files.length : Object.keys(parsedData.files || {}).length} files`);
+        
+        // Create project in target storage provider
         const newProjectRef = new ProjectReference(
             newProjectId,
-            this.selectedProjectReference.storageProvider,
-            this.selectedProjectReference.storageProviderParameters,
+            targetProvider,
+            null, // parameters will be set during creation
             this.selectedProjectReference.theme,
-            this.selectedProjectReference.selectedFileId
+            null // will be set to first file
         );
         
+        // Save project reference first
         this._saveProjectReference(newProjectRef);
+        
+        // Create project in target storage
+        const success = await targetStorageProviderInstance.createProject(newProjectId, newName, {});
+        
+        if (!success) {
+            // Remove reference if creation failed
+            this._deleteProjectReference(newProjectId);
+            return false;
+        }
+        
+        // Import files from source
+        let sourceFiles = parsedData.files || parsedData.diagrams;
+        
+        // Handle different export formats
+        if (!Array.isArray(sourceFiles)) {
+            // Convert object to array (localStorage format)
+            sourceFiles = Object.values(sourceFiles || {});
+        }
+        
+        this.logger.debug(`About to save ${sourceFiles.length} files to target storage`);
+        
+        for (const fileData of sourceFiles) {
+            this.logger.debug(`Saving file: ${fileData.id || fileData.name} with content length: ${fileData.content?.length || 0}`);
+            const file = File.fromObject({
+                ...fileData,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString()
+            });
+            
+            await targetStorageProviderInstance.saveFile(newProjectId, file.toObject());
+        }
+        
+        // Open the new project
         await this.openProject(newProjectId);
         
-        return newProjectRef;
+        return true;
     }
 
     /**
@@ -302,7 +460,7 @@ export class ProjectManager {
      */
     async getProjects() {
         this.logger.debug('Getting all projects');
-        const references = this.getProjectReferences();
+        const references = await this.getAccessibleProjectReferences();
         const projects = [];
         
         for (const ref of references) {
@@ -317,7 +475,7 @@ export class ProjectManager {
                     }
                     projects.push({
                         id: ref.id,
-                        name: name, // Use the corrected name variable
+                        name: `${storageProvider.getIcon()} ${name}`, // Use the corrected name variable
                         reference: ref
                     });
                 } else {
@@ -406,6 +564,87 @@ export class ProjectManager {
         }
     }
 
+    /**
+     * Open a folder and discover projects within it
+     */
+    async openFolder() {
+        this.logger.debug('Opening folder to discover projects');
+        
+        const fileSystemProvider = this.getStorageProvider('fileSystem');
+        if (!fileSystemProvider) {
+            throw new Error('File system storage provider not available');
+        }
+
+        const discovery = await fileSystemProvider.discoverProjectsInDirectory();
+        if (!discovery) {
+            // User cancelled
+            return null;
+        }
+
+        const { projects, directoryHandle } = discovery;
+        
+        if (projects.length === 0) {
+            throw new Error('No Mermaiditor projects found in the selected folder');
+        }
+
+        if (projects.length === 1) {
+            // Only one project, open it directly
+            const project = projects[0];
+            await fileSystemProvider.openDiscoveredProject(project);
+            
+            // Create project reference if it doesn't exist
+            let projectRef = this._getProjectReference(project.id);
+            if (!projectRef) {
+                projectRef = new ProjectReference(
+                    project.id,
+                    'fileSystem',
+                    {},
+                    'default',
+                    null
+                );
+                this._saveProjectReference(projectRef);
+            }
+            
+            await this.openProject(project.id);
+            return { selectedProject: project, allProjects: projects };
+        }
+
+        // Multiple projects found, return them for user selection
+        return { selectedProject: null, allProjects: projects, directoryHandle };
+    }
+
+    /**
+     * Open a specific project from a list of discovered projects
+     */
+    async openProjectFromFolder(discoveredProject, directoryHandle) {
+        this.logger.debug(`Opening project from folder: ${discoveredProject.name}`);
+        
+        const fileSystemProvider = this.getStorageProvider('fileSystem');
+        if (!fileSystemProvider) {
+            throw new Error('File system storage provider not available');
+        }
+
+        // Set the directory handle and open the project
+        discoveredProject.directoryHandle = directoryHandle;
+        await fileSystemProvider.openDiscoveredProject(discoveredProject);
+        
+        // Create project reference if it doesn't exist
+        let projectRef = this._getProjectReference(discoveredProject.id);
+        if (!projectRef) {
+            projectRef = new ProjectReference(
+                discoveredProject.id,
+                'fileSystem',
+                {},
+                'default',
+                null
+            );
+            this._saveProjectReference(projectRef);
+        }
+        
+        await this.openProject(discoveredProject.id);
+        return discoveredProject;
+    }
+
     // File operations (delegated to current storage provider)
     getSelectedFileId() {
         return this.selectedProjectReference?.selectedFileId;
@@ -434,6 +673,8 @@ export class ProjectManager {
         
         if (!success) return null;
         
+        // Set the file version to match the newly created file
+        this.fileVersion = file.version;
         await this.setSelectedFile(file.id);
         return file;
     }
@@ -518,7 +759,8 @@ export class ProjectManager {
         const files = await this.getFiles();
         if (files.length > 0) {
             await this.setSelectedFile(files[0].id);
-            return files[0];
+            // Get the full file with content
+            return await this.getFile(files[0].id);
         } else {
             const newFile = await this.createFile('Default');
             return newFile;

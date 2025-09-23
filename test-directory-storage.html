@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Storage Test</title>
+</head>
+<body>
+    <h1>Directory Storage Test</h1>
+    
+    <div>
+        <button id="selectFolder">Select Folder</button>
+        <button id="testRestore">Test Restore</button>
+        <button id="clearStorage">Clear Storage</button>
+    </div>
+    
+    <div>
+        <h3>Console Output:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script type="module">
+        import { directoryStorage } from './src/utils/directoryStorage.js';
+        
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            console.log(message);
+            output.textContent += message + '\n';
+        }
+
+        const testProjectId = 'test-project-123';
+
+        document.getElementById('selectFolder').addEventListener('click', async () => {
+            try {
+                log('Requesting directory picker...');
+                const directoryHandle = await window.showDirectoryPicker({
+                    mode: 'readwrite',
+                    startIn: 'documents'
+                });
+                
+                log(`Selected folder: ${directoryHandle.name}`);
+                
+                // Store in IndexedDB for the test project
+                await directoryStorage.storeProjectDirectory(testProjectId, directoryHandle);
+                log(`Directory handle stored for project: ${testProjectId}`);
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        });
+
+        document.getElementById('testRestore').addEventListener('click', async () => {
+            try {
+                log(`Attempting to restore directory handle for project: ${testProjectId}...`);
+                const directoryHandle = await directoryStorage.restoreProjectDirectory(testProjectId);
+                
+                if (directoryHandle) {
+                    log(`Restored folder: ${directoryHandle.name}`);
+                    
+                    // Test listing files in the directory
+                    log('Listing files in directory:');
+                    for await (const entry of directoryHandle.values()) {
+                        log(`  - ${entry.name} (${entry.kind})`);
+                    }
+                } else {
+                    log(`No stored directory handle found for project: ${testProjectId}`);
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        });
+
+        document.getElementById('clearStorage').addEventListener('click', async () => {
+            try {
+                await directoryStorage.clearProjectDirectory(testProjectId);
+                log(`Storage cleared for project: ${testProjectId}`);
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            }
+        });
+
+        // Auto-test on page load
+        window.addEventListener('load', async () => {
+            log('Page loaded, testing auto-restore...');
+            try {
+                const directoryHandle = await directoryStorage.restoreProjectDirectory(testProjectId);
+                if (directoryHandle) {
+                    log(`Auto-restored folder for project ${testProjectId}: ${directoryHandle.name}`);
+                } else {
+                    log(`No stored directory found for project: ${testProjectId}`);
+                }
+            } catch (error) {
+                log(`Auto-restore error: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

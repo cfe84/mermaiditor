@@ -70,18 +70,27 @@ export class Project {
  * File - Represents a diagram file within a project
  */
 export class File {
-    constructor(id, name, content, version = null) {
+    constructor(id, name, content, version = null, createdAt = null, modifiedAt = null) {
         this.id = id;
         this.name = name;
         this.content = content;
         this.version = version;
+        this.createdAt = createdAt || new Date().toISOString();
+        this.modifiedAt = modifiedAt || new Date().toISOString();
     }
 
     /**
      * Create a File from a plain object
      */
     static fromObject(obj) {
-        return new File(obj.id, obj.name, obj.content, obj.version);
+        return new File(
+            obj.id, 
+            obj.name, 
+            obj.content, 
+            obj.version,
+            obj.createdAt,
+            obj.modifiedAt
+        );
     }
 
     /**
@@ -92,7 +101,9 @@ export class File {
             id: this.id,
             name: this.name,
             content: this.content,
-            version: this.version
+            version: this.version,
+            createdAt: this.createdAt,
+            modifiedAt: this.modifiedAt
         };
     }
 }

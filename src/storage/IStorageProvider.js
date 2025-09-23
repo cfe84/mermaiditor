@@ -6,6 +6,10 @@
  */
 
 export class IStorageProvider {
+    getIcon() {
+        throw new Error("not implemented")
+    }
+
     /**
      * Get project metadata (name, etc.) without loading full content
      * @param {string} projectId - The project identifier
