@@ -50,7 +50,6 @@ export class DiagramRenderer {
                             setTimeout(() => {
                                 if (this.onLoadedCallback) {
                                     this.onLoadedCallback();
-                                    this.onLoadedCallback = null;
                                 }
                             }, 50);
                         });

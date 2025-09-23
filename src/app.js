@@ -19,7 +19,7 @@ class MermaiditorApp {
 
     async initialize() {
         try {
-            this.logger = new Logger(Logger.LogLevel.DEBUG);
+            this.logger = new Logger(Logger.LogLevel.WARN);
             this.logger.info(`Initializing Mermaiditor`);
 
             this.loadDependencies();
@@ -29,17 +29,20 @@ class MermaiditorApp {
             
             this.setupManagerInteractions();
             
-            await this.managers.project.openLastSelectedProject();
+            const lastProject = await this.managers.project.openLastSelectedProject();
 
             await this.managers.ui.loadProjects();
             await this.managers.ui.loadFiles();
             this.managers.ui.loadThemes();
 
-            const currentTheme = this.managers.project.getTheme();
-            this.managers.renderer.setTheme(currentTheme);
+            // Only set theme if we have a project loaded
+            if (lastProject) {
+                const currentTheme = this.managers.project.getTheme();
+                this.managers.renderer.setTheme(currentTheme);
 
-            // Load the last opened file
-            await this.loadCurrentFile();
+                // Load the last opened file
+                await this.loadCurrentFile();
+            }
 
             // Check for shared projects in URL
             setTimeout(async () => {
@@ -61,7 +64,7 @@ class MermaiditorApp {
             this.managers.viewport = new ViewportManager(this.logger.withContext('ViewportManager'));
             this.managers.renderer = new DiagramRenderer(this.logger.withContext('DiagramRenderer'),mermaid);
             this.managers.export = new ExportManager(this.managers.viewport);
-            this.managers.editor = new EditorManager(this.managers.project);
+            this.managers.editor = new EditorManager(this.logger.withContext('EditorManager'), this.managers.project);
             this.managers.ui = new UIManager(this.managers.project, this.managers.template, this.managers.viewport);
     }
 
@@ -104,6 +107,7 @@ class MermaiditorApp {
 
     async onThemeChanged(theme) {
         this.managers.renderer.setTheme(theme);
+        this.managers.project.setTheme(theme);
         const content = this.managers.editor.getContent();
         if (content) {
             await this.managers.renderer.renderDiagram(content);

@@ -38,34 +38,34 @@ export class Logger {
             // Pattern 1: ES6 class methods (e.g., "at ProjectManager.saveFile")
             match = callerLine.match(/at\s+([^.]+)\.([^.\s]+)\s/);
             if (match) {
-                return `${match[1]}.${match[2]}`;
+                return `${this.context || match[1]}.${match[2]}`;
             }
             
             // Pattern 2: Function calls (e.g., "at saveFile")
             match = callerLine.match(/at\3s+([^.\s(]+)/);
             if (match) {
-                return `*.${match[1]}`;
+                return `${this.context || "*"}.${match[1]}`;
             }
             
             // Pattern 3: Anonymous functions or arrow functions
             match = callerLine.match(/at\s+Object\.([^.\s(]+)/);
             if (match) {
-                return `Object.${match[1]}`;
+                return `${this.context || "Object"}.${match[1]}`;
             }
 
             // Pattern 4: method@....classname
             match = callerLine.match(/([^@]+)@(?:[^/]*\/)*([^/\\]+)\.js:(\d+)/);
             if (match) {
-                return `${match[2]}.${match[1]}.line_${match[3]}`;
+                return `${this.context || match[2]}.${match[1]}.line_${match[3]}`;
             }
 
             // Pattern 5: File-based pattern as fallback
             match = callerLine.match(/([^/\\]+)\.js:(\d+)/);
             if (match) {
-                return `${match[1]}.line_${match[2]}`;
+                return `${this.context || match[1]}.line_${match[2]}`;
             }
         }
-        return 'unknown.unknown';
+        return `${this.context || "unknown"}.unknown`;
     }
 
     _log(level, levelName, ...args) {

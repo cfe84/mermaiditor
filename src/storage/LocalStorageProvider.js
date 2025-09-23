@@ -9,13 +9,34 @@ export class LocalStorageProvider extends IStorageProvider {
         super();
     }
 
+    getIcon() {
+        return "🌎";
+    }
+
     async getProjectMetadata(projectId) {
         try {
             const projectData = localStorage.getItem(`project-${projectId}`);
             if (!projectData) return null;
             
             const project = JSON.parse(projectData);
-            return { name: project.name };
+            
+            // Handle new v2 format (after migration)
+            if (project.metadata) {
+                return {
+                    id: project.metadata.id,
+                    name: project.metadata.name,
+                    theme: project.metadata.theme || 'default',
+                    selectedFileId: project.metadata.selectedFileId
+                };
+            }
+            
+            // Handle old v1 format (fallback)
+            return { 
+                id: project.id || projectId,
+                name: project.name,
+                theme: 'default',
+                selectedFileId: project.selectedFile
+            };
         } catch (error) {
             console.error('Error getting project metadata:', error);
             return null;
@@ -72,7 +93,8 @@ export class LocalStorageProvider extends IStorageProvider {
             if (!projectData) return null;
             
             const project = JSON.parse(projectData);
-            return project.diagrams || {};
+            // Use new v2 format (files) or fall back to old v1 format (diagrams) for compatibility
+            return project.files || project.diagrams || {};
         } catch (error) {
             console.error('Error getting project files:', error);
             return null;
@@ -178,5 +200,19 @@ export class LocalStorageProvider extends IStorageProvider {
             console.error('Error importing project:', error);
             throw new Error('Invalid project data');
         }
+    }
+
+    /**
+     * Get display name for this provider
+     */
+    getDisplayName() {
+        return 'Browser Storage';
+    }
+
+    /**
+     * Get provider ID
+     */
+    getProviderId() {
+        return 'localStorage';
     }
 }
