@@ -80,7 +80,7 @@ export class Logger {
     }
 
     warn(...args) {
-        this._log(Logger.LogLevel.WARN, 'WARN ', ...args);
+        this._log(Logger.LogLevel.WARN, 'WARN', ...args);
     }
 
     info(...args) {

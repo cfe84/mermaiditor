@@ -13,14 +13,16 @@ import { Logger } from './Logger.js';
 
 class MermaiditorApp {
     constructor() {
+        this.version = '1.2.1';
         this.managers = {};
         this.isInitialized = false;
     }
 
     async initialize() {
         try {
-            this.logger = new Logger(Logger.LogLevel.WARN);
-            this.logger.info(`Initializing Mermaiditor`);
+            const logLevel = localStorage.getItem('debug') ? Logger.LogLevel.DEBUG : Logger.LogLevel.WARN;
+            this.logger = new Logger(logLevel);
+            this.logger.info(`Initializing Mermaiditor v${this.version}`);
 
             this.loadDependencies();
             
@@ -29,13 +31,13 @@ class MermaiditorApp {
             
             this.setupManagerInteractions();
             
-            const lastProject = await this.managers.project.openLastSelectedProject();
 
             await this.managers.ui.loadProjects();
             await this.managers.ui.loadFiles();
             this.managers.ui.loadThemes();
 
             // Only set theme if we have a project loaded
+            const lastProject = await this.managers.project.openLastSelectedProject();
             if (lastProject) {
                 const currentTheme = this.managers.project.getTheme();
                 this.managers.renderer.setTheme(currentTheme);
@@ -50,9 +52,9 @@ class MermaiditorApp {
             }, 500);
 
             this.isInitialized = true;
-            console.log('Mermaiditor initialized successfully');
+            this.logger.info('Mermaiditor initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize Mermaiditor:', error);
+            this.logger.error('Failed to initialize Mermaiditor:', error);
             alert('Failed to initialize the application: ' + error.message);
         }
     }

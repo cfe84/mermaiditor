@@ -610,20 +610,22 @@
       <div class="modal-content">
         <h2>📁 File System Access Required</h2>
         <p id="filesystem-access-message">
-          You have projects stored in local folders. To access them, Mermaiditor needs permission to read and write files on your computer.
+          You have projects stored in local folders. To access them, Mermaiditor needs permission to read and write files on your computer.<br>
+        </p>
+        <p>
+          Mermaiditor can only access folders that you grant access to, and no data ever leaves your computer.
         </p>
         <p>
           <strong>Why do we need this?</strong><br>
           • Access your existing project folders<br>
           • Save changes directly to your files<br>
-          • Keep your work synchronized across sessions
+          • Keep your work synchronized across sessions<br>
         </p>
         <p style="font-size: 0.9em; color: #666;">
-          <em>Note: You can always enable this later when creating or opening projects.</em>
+          <em>You will see the browser confirmation dialog after click allow, once for each filesystem project you have in your list.<br/>If you select "Remember for each visit" you wont have to re-approve later.</em>
         </p>
         <div class="button-row">
           <button id="filesystem-access-allow" style="background: #28a745; color: white;">Allow Access</button>
-          <button id="filesystem-access-deny" style="background: #6c757d; color: white;">Use Browser Storage Only</button>
         </div>
       </div>
     </div>

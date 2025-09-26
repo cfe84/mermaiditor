@@ -5,8 +5,9 @@
 
 import { get, set, del, keys } from 'https://cdn.skypack.dev/idb-keyval';
 
-class DirectoryStorage {
-    constructor() {
+export class DirectoryStorage {
+    constructor(logger) {
+        this.logger = logger;
         this.keyPrefix = 'mermaiditor-directory-';
     }
 
@@ -30,7 +31,7 @@ class DirectoryStorage {
 
         const key = this._getProjectKey(projectId);
         await set(key, directoryHandle);
-        console.log(`Directory handle stored for project: ${projectId}`);
+         this.logger.info(`Directory handle stored for project: ${projectId}`);
     }
 
     /**
@@ -45,32 +46,22 @@ class DirectoryStorage {
         const directoryHandle = await get(key);
         
         if (directoryHandle) {
-            console.log(`Directory handle retrieved for project: ${projectId}`);
+             this.logger.info(`Directory handle retrieved for project: ${projectId}`);
         } else {
-            console.log(`No directory handle found for project: ${projectId}`);
+             this.logger.info(`No directory handle found for project: ${projectId}`);
         }
         
         return directoryHandle || null;
     }
 
-    /**
-     * Remove the stored directory handle for a specific project
-     */
-    async clearProjectDirectory(projectId) {
+    async removeProjectDirectory(projectId) {
         if (!projectId) {
             throw new Error('Project ID is required');
         }
 
         const key = this._getProjectKey(projectId);
         await del(key);
-        console.log(`Directory handle cleared for project: ${projectId}`);
-    }
-
-    /**
-     * Alias for clearProjectDirectory for consistency
-     */
-    async removeProjectDirectory(projectId) {
-        return this.clearProjectDirectory(projectId);
+        this.logger.info(`Directory handle cleared for project: ${projectId}`);
     }
 
     /**
@@ -115,7 +106,11 @@ class DirectoryStorage {
                 return false;
             }
         } catch (error) {
-            console.warn('Error verifying directory access:', error);
+            if (error.message.indexOf(`User activation is required to request permissions`) >= 0) {
+                // This is recoverable, we'll let higher levels retry.
+                throw error;
+            }
+            this.logger.error('Error verifying directory access:', error);
             return false;
         }
     }
@@ -129,29 +124,15 @@ class DirectoryStorage {
             if (!directoryHandle) {
                 return null;
             }
-
-            // Verify we still have access to this directory
-            const hasAccess = await this.verifyDirectoryAccess(directoryHandle);
-            if (!hasAccess) {
-                console.log(`Directory access revoked for project ${projectId}, clearing stored handle`);
-                await this.clearProjectDirectory(projectId);
-                return null;
+            if (this.verifyDirectoryAccess(directoryHandle)) {
+                return directoryHandle;
             }
 
-            console.log(`Directory handle restored successfully for project: ${projectId}`);
-            return directoryHandle;
+            this.logger.error(`Error: permission has not been granted`);
+            return null;
         } catch (error) {
-            console.error(`Error restoring directory handle for project ${projectId}:`, error);
-            // Clear invalid handle
-            try {
-                await this.clearProjectDirectory(projectId);
-            } catch (clearError) {
-                console.error(`Error clearing invalid directory handle for project ${projectId}:`, clearError);
-            }
+            this.logger.error(`Error restoring directory handle for project ${projectId}:`, error);
             return null;
         }
     }
 }
-
-// Export a singleton instance
-export const directoryStorage = new DirectoryStorage();

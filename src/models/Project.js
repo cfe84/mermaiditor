@@ -6,8 +6,9 @@
  * ProjectReference - Metadata about a project including how to access it
  */
 export class ProjectReference {
-    constructor(id, storageProvider, storageProviderParameters = {}, theme = 'default', selectedFileId = null) {
+    constructor(id, name, storageProvider, storageProviderParameters = {}, theme = 'default', selectedFileId = null) {
         this.id = id;
+        this.name = name;
         this.storageProvider = storageProvider; // e.g., 'localStorage', 'remote', etc.
         this.storageProviderParameters = storageProviderParameters; // e.g., { url: '...', apiKey: '...' }
         this.theme = theme;
@@ -20,6 +21,7 @@ export class ProjectReference {
     static fromObject(obj) {
         return new ProjectReference(
             obj.id,
+            obj.name,
             obj.storageProvider,
             obj.storageProviderParameters || {},
             obj.theme || 'default',
@@ -33,6 +35,7 @@ export class ProjectReference {
     toObject() {
         return {
             id: this.id,
+            name: this.name,
             storageProvider: this.storageProvider,
             storageProviderParameters: this.storageProviderParameters,
             theme: this.theme,

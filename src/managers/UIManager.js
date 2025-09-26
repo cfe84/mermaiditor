@@ -61,9 +61,6 @@ export class UIManager {
             filesystemDeletionConfirm: document.getElementById('filesystem-deletion-confirm'),
             filesystemDeletionCancel: document.getElementById('filesystem-deletion-cancel'),
             filesystemAccessAllow: document.getElementById('filesystem-access-allow'),
-            filesystemAccessDeny: document.getElementById('filesystem-access-deny'),
-            filesystemReconnectSelect: document.getElementById('filesystem-reconnect-select'),
-            filesystemReconnectCancel: document.getElementById('filesystem-reconnect-cancel')
         };
     }
 
@@ -113,17 +110,14 @@ export class UIManager {
         // Filesystem Deletion dialog
         this.elements.filesystemDeletionConfirm.addEventListener('click', () => this.handleFilesystemDeletionConfirm());
         this.elements.filesystemDeletionCancel.addEventListener('click', () => this.handleFilesystemDeletionCancel());
-        
-        // File System Access dialogs
+
+        // Filesystem access dialog
         this.elements.filesystemAccessAllow.addEventListener('click', () => this.handleFilesystemAccessAllow());
-        this.elements.filesystemAccessDeny.addEventListener('click', () => this.handleFilesystemAccessDeny());
-        this.elements.filesystemReconnectSelect.addEventListener('click', () => this.handleFilesystemReconnectSelect());
-        this.elements.filesystemReconnectCancel.addEventListener('click', () => this.handleFilesystemReconnectCancel());
     }
 
     // Project selector management
     async loadProjects() {
-        const projects = await this.projectManager.getProjects();
+        const projects = await this.projectManager.getProjects(this);
         const selectedProject = this.projectManager.getSelectedProject();
         
         this.elements.projectSelector.innerHTML = '';
@@ -946,28 +940,23 @@ export class UIManager {
         this.viewPortManager.resetZoom();
     }
 
-    /**
-     * Show a prompt to reconnect to file system storage
-     */
+    requestUserAccessPromptAsync(callback) {
+        return new Promise((resolve, reject) => {
+            this.onUserAccessAllowed = () => {
+                callback().then((res) => resolve(res))
+            }
+            this.onUserAccessError = (error) => {
+                reject(error);
+            }
+            this.showFileSystemAccessPrompt();
+        });
+    }
+
     /**
      * Show the file system access prompt dialog
      */
     showFileSystemAccessPrompt() {
         this.elements.filesystemAccessDialog.style.display = 'flex';
-    }
-
-    /**
-     * Show the file system reconnect dialog
-     */
-    showFileSystemReconnectPrompt() {
-        const pendingProject = this.projectManager.getPendingFileSystemProject();
-        if (!pendingProject) return;
-
-        const projectName = pendingProject.id;
-        this.elements.filesystemReconnectMessage.textContent = 
-            `Your last project "${projectName}" is stored in a local folder.`;
-        
-        this.elements.filesystemReconnectDialog.style.display = 'flex';
     }
 
     /**
@@ -977,91 +966,14 @@ export class UIManager {
         this.elements.filesystemAccessDialog.style.display = 'none';
         
         try {
-            await this.projectManager.initializeStorageProvider('fileSystem');
-            
-            // Reload projects and files if file system access was granted
-            await this.loadProjects();
-            
-            // Try to open pending file system project if there was one
-            if (this.projectManager.hasPendingFileSystemProject()) {
-                try {
-                    await this.projectManager.openPendingFileSystemProject();
-                    await this.loadFiles();
-                    const currentTheme = this.projectManager.getTheme();
-                    if (window.app && window.app.managers && window.app.managers.renderer) {
-                        window.app.managers.renderer.setTheme(currentTheme);
-                    }
-                    if (window.app) {
-                        await window.app.loadCurrentFile();
-                    }
-                } catch (error) {
-                    console.error('Failed to open pending file system project:', error);
-                }
-            }
-            
+            await this.onUserAccessAllowed();
         } catch (error) {
-            if (error.name === 'AbortError') {
-                this.showNotification('Folder selection cancelled. You can enable file system access later by creating a new project with file system storage.', 'info');
-            } else {
-                this.showNotification('Failed to enable file system access: ' + error.message, 'error');
-            }
+            this.onUserAccessError(error);
         }
     }
 
     /**
-     * Handle file system access deny button
-     */
-    handleFilesystemAccessDeny() {
-        this.elements.filesystemAccessDialog.style.display = 'none';
-        this.showNotification('Continuing with browser storage. You can enable file system access later.', 'info');
-    }
-
-    /**
-     * Handle file system reconnect select button
-     */
-    async handleFilesystemReconnectSelect() {
-        this.elements.filesystemReconnectDialog.style.display = 'none';
-        
-        try {
-            // Initialize the file system storage provider
-            await this.projectManager.initializeStorageProvider('fileSystem');
-            
-            // Open the pending project
-            await this.projectManager.openPendingFileSystemProject();
-            
-            // Reload the UI
-            await this.loadProjects();
-            await this.loadFiles();
-            
-            // Set the theme and load the file
-            const currentTheme = this.projectManager.getTheme();
-            if (window.app && window.app.managers && window.app.managers.renderer) {
-                window.app.managers.renderer.setTheme(currentTheme);
-            }
-            
-            if (window.app) {
-                await window.app.loadCurrentFile();
-            }
-            
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                this.showNotification('Folder selection cancelled. You can reconnect later by selecting the project.', 'info');
-            } else {
-                this.showNotification('Failed to reconnect to folder: ' + error.message, 'error');
-            }
-        }
-    }
-
-    /**
-     * Handle file system reconnect cancel button
-     */
-    handleFilesystemReconnectCancel() {
-        this.elements.filesystemReconnectDialog.style.display = 'none';
-        // Could create a new project here or just continue with existing state
-    }
-
-    /**
-     * Show a notification message (simple implementation)
+     * Show a notification message
      */
     showNotification(message, type = 'info') {
         // For now, use console and a simple alert

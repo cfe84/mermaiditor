@@ -174,7 +174,7 @@ export class ProjectManager {
             try {
                 const provider = this.storageProviders.get(ref.storageProvider);
                 if (!provider) {
-                    this.logger.warn(`Storage provider not found for project ${ref.id}: ${ref.storageProvider}`);
+                    this.logger.warn(`Storage provider not found for project ${ref.id} / ${ref.name}: ${ref.storageProvider}`);
                     continue;
                 }
 
@@ -182,7 +182,9 @@ export class ProjectManager {
                 if (ref.storageProvider === 'fileSystem') {
                     const metadata = await provider.getProjectMetadata(ref.id);
                     if (!metadata) {
-                        this.logger.warn(`Cannot access filesystem project ${ref.id}: no directory handle`);
+                        this.logger.warn(`Cannot access filesystem project ${ref.id} / ${ref.name}: no directory handle`);
+                        ref.problem = true;
+                        ref.name ||= ref.id;
                         continue;
                     }
                 }
@@ -232,6 +234,7 @@ export class ProjectManager {
         // Create project reference
         const projectRef = new ProjectReference(
             projectId,
+            name,
             storageProviderName,
             storageProviderParameters,
             'default',
@@ -374,6 +377,9 @@ export class ProjectManager {
     async renameProject(newName) {
         this.logger.debug(`Renaming project to: ${newName}`);
         if (!this.selectedProjectReference || !this.currentStorageProvider) return false;
+
+        this.selectedProjectReference = newName;
+        this._saveProjectReference(this.selectedProjectReference);
         
         const success = await this.currentStorageProvider.updateProjectMetadata(
             this.selectedProjectReference.id,
@@ -409,6 +415,7 @@ export class ProjectManager {
         // Create project in target storage provider
         const newProjectRef = new ProjectReference(
             newProjectId,
+            newName,
             targetProvider,
             null, // parameters will be set during creation
             this.selectedProjectReference.theme,
@@ -458,7 +465,7 @@ export class ProjectManager {
     /**
      * Get all projects with their names (async because we need to fetch names from storage)
      */
-    async getProjects() {
+    async getProjects(uiManager, retried = false) {
         this.logger.debug('Getting all projects');
         const references = await this.getAccessibleProjectReferences();
         const projects = [];
@@ -466,7 +473,17 @@ export class ProjectManager {
         for (const ref of references) {
             const storageProvider = this.getStorageProvider(ref.storageProvider);
             if (storageProvider) {
-                const metadata = await storageProvider.getProjectMetadata(ref.id);
+                let metadata;
+                try {
+                    metadata = await storageProvider.getProjectMetadata(ref.id);
+                } catch (error) {
+                    if (error.message.indexOf(`User activation is required`) >= 0 && !retried) {
+                        this.logger.warn(`User activation required to access project ${ref.id}, prompting user.`);
+                        // We wrap the callback for that method in a user activation.
+                        return await uiManager.requestUserAccessPromptAsync(() => this.getProjects(uiManager, true));
+                    }
+                    this.logger.error(`Error retrieving project metadata:`, error);
+                }
                 if (metadata) {
                     let name = metadata.name;
                     if (!name) {
@@ -480,6 +497,12 @@ export class ProjectManager {
                     });
                 } else {
                     this.logger.warn(`Could not get metadata for project ${ref.id}`);
+                    projects.push({
+                        id: ref.id,
+                        name: `⚠️` + (ref.name || `Project ${ref.id}`) + ` (cannot access)`,
+                        reference: ref,
+                        problem: true,
+                    });
                 }
             } else {
                 this.logger.warn(`Storage provider ${ref.storageProvider} not found for project ${ref.id}`);
@@ -525,6 +548,7 @@ export class ProjectManager {
             // Create project reference
             const projectRef = new ProjectReference(
                 result.projectId,
+                parsed.name,
                 'localStorage',
                 {},
                 'default',
@@ -597,6 +621,7 @@ export class ProjectManager {
             if (!projectRef) {
                 projectRef = new ProjectReference(
                     project.id,
+                    project.name,
                     'fileSystem',
                     {},
                     'default',
@@ -633,6 +658,7 @@ export class ProjectManager {
         if (!projectRef) {
             projectRef = new ProjectReference(
                 discoveredProject.id,
+                discoveredProject.name,
                 'fileSystem',
                 {},
                 'default',
@@ -869,7 +895,7 @@ export class ProjectManager {
         }
         
         // No selected project, create or open default
-        const projects = await this.getProjects();
+        const projects = (await this.getProjects()).filter(p => !p.problem);
         if (projects.length > 0) {
             await this.openProject(projects[0].id);
             return projects[0].reference;

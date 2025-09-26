@@ -3,11 +3,12 @@
  * Only works in Chrome/Edge browsers with File System Access API support
  */
 
-import { directoryStorage } from '../utils/directoryStorage.js';
+import { DirectoryStorage } from '../utils/directoryStorage.js';
 
 export class FileSystemStorageProvider {
     constructor(logger) {
-        this.logger = logger?.withContext('FileSystemStorageProvider') || console;
+        this.directoryStorage = new DirectoryStorage(logger.withContext("DirectoryStorage"));
+        this.logger = logger.withContext('FileSystemStorageProvider');
         // Map of projectId -> directoryHandle for active projects
         this.projectDirectories = new Map();
     }
@@ -37,11 +38,13 @@ export class FileSystemStorageProvider {
     async getProjectDirectoryHandle(projectId) {
         // Check if we have it in memory
         if (this.projectDirectories.has(projectId)) {
-            return this.projectDirectories.get(projectId);
+            const handle = this.projectDirectories.get(projectId);
+            await this.directoryStorage.verifyDirectoryAccess(handle);
+            return handle;
         }
 
         // Try to restore from IndexedDB
-        const directoryHandle = await directoryStorage.restoreProjectDirectory(projectId);
+        const directoryHandle = await this.directoryStorage.restoreProjectDirectory(projectId);
         if (directoryHandle) {
             this.projectDirectories.set(projectId, directoryHandle);
             return directoryHandle;
@@ -56,7 +59,7 @@ export class FileSystemStorageProvider {
     async discoverProjectsInDirectory() {
         try {
             const directoryHandle = await window.showDirectoryPicker({
-                mode: 'read'
+                mode: 'readwrite'
             });
 
             const projects = [];
@@ -106,7 +109,7 @@ export class FileSystemStorageProvider {
         
         // Store the directory handle for this project
         this.projectDirectories.set(id, directoryHandle);
-        await directoryStorage.storeProjectDirectory(id, directoryHandle);
+        await this.directoryStorage.storeProjectDirectory(id, directoryHandle);
         
         this.logger.info(`Opened existing project from folder: ${discoveredProject.name}`);
         return true;
@@ -117,7 +120,7 @@ export class FileSystemStorageProvider {
      */
     async setProjectDirectoryHandle(projectId, directoryHandle) {
         this.projectDirectories.set(projectId, directoryHandle);
-        await directoryStorage.storeProjectDirectory(projectId, directoryHandle);
+        await this.directoryStorage.storeProjectDirectory(projectId, directoryHandle);
     }
 
     /**
@@ -125,7 +128,7 @@ export class FileSystemStorageProvider {
      */
     async clearProjectDirectory(projectId) {
         this.projectDirectories.delete(projectId);
-        await directoryStorage.clearProjectDirectory(projectId);
+        await this.directoryStorage.clearProjectDirectory(projectId);
     }
 
     /**
@@ -187,6 +190,10 @@ export class FileSystemStorageProvider {
             
             return null;
         } catch (error) {
+            if (error.message.indexOf(`User activation is required`) >= 0) {
+                this.logger.warn(`User activation required`);
+                throw error;
+            }
             this.logger.error(`Error getting project metadata for ${projectId}:`, error);
             return null;
         }
@@ -624,7 +631,7 @@ export class FileSystemStorageProvider {
             
             // Clean up directory handle from memory and storage
             this.projectDirectories.delete(projectId);
-            await directoryStorage.removeProjectDirectory(projectId);
+            await this.directoryStorage.removeProjectDirectory(projectId);
             
             this.logger.info(`Deleted all files for project ${projectId}`);
             return true;
@@ -712,7 +719,7 @@ export class FileSystemStorageProvider {
      */
     async clearStoredDirectory() {
         try {
-            await directoryStorage.clearDirectoryHandle();
+            await this.directoryStorage.clearDirectoryHandle();
             this.directoryHandle = null;
             this.isInitialized = false;
             this.logger.info('Cleared stored directory handle');
@@ -817,7 +824,7 @@ export class FileSystemStorageProvider {
 
         try {
             this.logger.info('Attempting auto-initialization from stored directory');
-            this.directoryHandle = await directoryStorage.restoreDirectoryHandle();
+            this.directoryHandle = await this.directoryStorage.restoreDirectoryHandle();
             
             if (this.directoryHandle) {
                 this.isInitialized = true;
