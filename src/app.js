@@ -13,7 +13,7 @@ import { Logger } from './Logger.js';
 
 class MermaiditorApp {
     constructor() {
-        this.version = '1.2.1';
+        this.version = '1.2.2';
         this.managers = {};
         this.isInitialized = false;
     }
@@ -31,13 +31,15 @@ class MermaiditorApp {
             
             this.setupManagerInteractions();
             
-
+            // Open the last selected project first
+            const lastProject = await this.managers.project.openLastSelectedProject();
+            
+            // Now load the UI with the correct project selected
             await this.managers.ui.loadProjects();
             await this.managers.ui.loadFiles();
             this.managers.ui.loadThemes();
 
             // Only set theme if we have a project loaded
-            const lastProject = await this.managers.project.openLastSelectedProject();
             if (lastProject) {
                 const currentTheme = this.managers.project.getTheme();
                 this.managers.renderer.setTheme(currentTheme);
